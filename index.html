@@ -25,6 +25,11 @@
       padding: 15px;
       text-align: center;
     }
+    header img {
+      max-height: 50px;
+      display: block;
+      margin: 0 auto 10px;
+    }
     nav {
       display: flex;
       background-color: var(--accent);
@@ -83,6 +88,22 @@
       font-weight: bold;
       color: var(--primary);
     }
+    table {
+      width: 100%;
+      margin-top: 20px;
+      border-collapse: collapse;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    th, td {
+      border: 1px solid var(--border);
+      padding: 10px;
+      text-align: center;
+    }
+    th {
+      background-color: var(--accent);
+      color: white;
+    }
     .hidden {
       display: none;
     }
@@ -105,20 +126,6 @@
     .botoes-relatorio button:hover {
       background-color: var(--primary);
     }
-    table {
-      width: 100%;
-      margin-top: 20px;
-      border-collapse: collapse;
-    }
-    th, td {
-      border: 1px solid var(--border);
-      padding: 10px;
-      text-align: center;
-    }
-    th {
-      background-color: var(--accent);
-      color: white;
-    }
   </style>
 </head>
 <body>
@@ -127,10 +134,11 @@
     <h2>Inspeção de Cana</h2>
   </header>
   <nav>
-    <button class="tab-btn active" onclick="showTab('registro')">Registrar Inspeção</button>
-    <button class="tab-btn" onclick="showTab('relatorio')">Relatório</button>
+    <button class="tab-btn active" onclick="mostrarTab('registro', this)">Registrar Inspeção</button>
+    <button class="tab-btn" onclick="mostrarTab('relatorio', this)">Relatório</button>
   </nav>
   <div class="container">
+    <!-- REGISTRO -->
     <div id="registro" class="tab-content card">
       <label for="codigo">Código da Fazenda:</label>
       <input type="number" id="codigo" />
@@ -146,11 +154,13 @@
       <div class="resultado" id="resultado"></div>
       <button class="save" onclick="salvar()">Salvar Inspeção</button>
     </div>
+
+    <!-- RELATÓRIO -->
     <div id="relatorio" class="tab-content card hidden">
       <label for="inicio">Data Início:</label>
-      <input type="date" id="inicio">
+      <input type="date" id="inicio" />
       <label for="fim">Data Fim:</label>
-      <input type="date" id="fim">
+      <input type="date" id="fim" />
       <div class="botoes-relatorio">
         <button onclick="gerarRelatorioPDF()">Gerar Relatório (PDF)</button>
         <button onclick="exportarExcel()">Exportar para Excel</button>
@@ -158,13 +168,14 @@
       <div id="tabelaRelatorio"></div>
     </div>
   </div>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+
+  <!-- Bibliotecas PDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
   <script>
-    const SUPABASE_URL = 'https://SEU_PROJETO.supabase.co';
-    const SUPABASE_ANON_KEY = 'SUA_CHAVE_PUBLICA_ANON';
-    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js');
+    }
 
     const fazendas = {
       4012: "FAZ. LAGOA CERCADA",
@@ -172,11 +183,13 @@
       4045: "FAZ. MERINDO I"
     };
 
-    function showTab(id) {
+    const registros = JSON.parse(localStorage.getItem('registros') || '[]');
+
+    function mostrarTab(id, btn) {
       document.querySelectorAll('.tab-content').forEach(div => div.classList.add('hidden'));
       document.getElementById(id).classList.remove('hidden');
-      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-      event.target.classList.add('active');
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
     }
 
     document.getElementById('codigo').addEventListener('input', function () {
@@ -200,7 +213,7 @@
       }
     }
 
-    async function salvar() {
+    function salvar() {
       const codigo = document.getElementById('codigo').value.trim();
       const fazenda = fazendas[codigo] || "Desconhecida";
       const data = document.getElementById('data').value;
@@ -214,46 +227,24 @@
       }
 
       const brocamento = ((brocado / entrenos) * 100).toFixed(2);
-      const novaInspecao = {
-        id: crypto.randomUUID(),
-        codigo,
-        fazenda,
-        data,
-        talhao,
-        entrenos,
-        brocado,
-        brocamento
-      };
+      registros.push({ codigo, fazenda, data, talhao, entrenos, brocado, brocamento });
+      localStorage.setItem('registros', JSON.stringify(registros));
 
-      const { error } = await supabase.from('inspecoes').insert([novaInspecao]);
-
-      if (error) {
-        console.error('Erro ao salvar:', error);
-        alert('Erro ao salvar a inspeção');
-      } else {
-        alert('Inspeção registrada com sucesso!');
-        document.querySelectorAll("#registro input").forEach(i => i.value = "");
-        document.getElementById('fazendaNome').textContent = "";
-        document.getElementById('resultado').textContent = "";
-      }
+      alert("Inspeção registrada com sucesso!");
+      document.querySelectorAll("#registro input").forEach(i => i.value = "");
+      document.getElementById('fazendaNome').textContent = "";
+      document.getElementById('resultado').textContent = "";
     }
 
-    async function gerarRelatorioPDF() {
+    function gerarRelatorioPDF() {
       const inicio = document.getElementById('inicio').value;
       const fim = document.getElementById('fim').value;
       if (!inicio || !fim) {
         alert("Preencha as datas de início e término.");
         return;
       }
-
-      const { data, error } = await supabase
-        .from('inspecoes')
-        .select('*')
-        .gte('data', inicio)
-        .lte('data', fim)
-        .order('data', { ascending: true });
-
-      if (error || !data.length) {
+      const filtrados = registros.filter(r => r.data >= inicio && r.data <= fim);
+      if (filtrados.length === 0) {
         alert("Nenhum registro encontrado no período.");
         return;
       }
@@ -263,30 +254,23 @@
       doc.text("Relatório de Inspeção de Cana", 14, 16);
       doc.autoTable({
         head: [["Data", "Código", "Fazenda", "Talhão", "Entrenós", "Brocado", "% Brocamento"]],
-        body: data.map(r => [r.data, r.codigo, r.fazenda, r.talhao, r.entrenos, r.brocado, `${r.brocamento}%`]),
+        body: filtrados.map(r => [r.data, r.codigo, r.fazenda, r.talhao, r.entrenos, r.brocado, `${r.brocamento}%`]),
         startY: 20
       });
       doc.save("relatorio.pdf");
     }
 
-    async function exportarExcel() {
+    function exportarExcel() {
       const inicio = document.getElementById('inicio').value;
       const fim = document.getElementById('fim').value;
-
-      const { data, error } = await supabase
-        .from('inspecoes')
-        .select('*')
-        .gte('data', inicio)
-        .lte('data', fim)
-        .order('data', { ascending: true });
-
-      if (error || !data.length) {
+      const filtrados = registros.filter(r => r.data >= inicio && r.data <= fim);
+      if (filtrados.length === 0) {
         alert("Nenhum registro encontrado.");
         return;
       }
 
       let tabela = "<table><tr><th>Data</th><th>Código</th><th>Fazenda</th><th>Talhão</th><th>Entrenós</th><th>Brocado</th><th>% Brocamento</th></tr>";
-      data.forEach(r => {
+      filtrados.forEach(r => {
         tabela += `<tr><td>${r.data}</td><td>${r.codigo}</td><td>${r.fazenda}</td><td>${r.talhao}</td><td>${r.entrenos}</td><td>${r.brocado}</td><td>${r.brocamento}%</td></tr>`;
       });
       tabela += "</table>";
