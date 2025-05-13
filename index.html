@@ -108,20 +108,6 @@
       font-weight: bold;
       color: var(--primary);
     }
-    table {
-      width: 100%;
-      margin-top: 20px;
-      border-collapse: collapse;
-    }
-    th, td {
-      border: 1px solid var(--border);
-      padding: 10px;
-      text-align: center;
-    }
-    th {
-      background-color: var(--accent);
-      color: white;
-    }
     .hidden {
       display: none;
     }
@@ -218,8 +204,6 @@
         <button onclick="gerarRelatorioPDF()">Gerar Relatório (PDF)</button>
         <button onclick="exportarExcel()">Exportar para Excel</button>
       </div>
-
-      <div id="tabelaRelatorio"></div>
     </div>
 
     <!-- EXCLUSÃO -->
@@ -231,6 +215,7 @@
 
   </div>
 
+  <!-- Bibliotecas externas -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
 
@@ -255,7 +240,6 @@
     function mostrarTab(id) {
       document.querySelectorAll('.tab-content').forEach(div => div.classList.add('hidden'));
       document.getElementById(id).classList.remove('hidden');
-      if (id === 'relatorio') renderTabelaRelatorio();
       if (id === 'exclusao') renderExclusao();
       document.getElementById('menuDropdown').style.display = 'none';
     }
@@ -304,47 +288,6 @@
       document.getElementById('resultado').textContent = "";
     }
 
-    function renderTabelaRelatorio() {
-      const inicio = document.getElementById('inicio').value;
-      const fim = document.getElementById('fim').value;
-      const fazendaFiltro = document.getElementById('fazendaFiltro').value;
-
-      let filtrados = registros.filter(r => {
-        const dentroData = (!inicio || r.data >= inicio) && (!fim || r.data <= fim);
-        const mesmaFazenda = !fazendaFiltro || r.codigo === fazendaFiltro;
-        return dentroData && mesmaFazenda;
-      });
-
-      if (filtrados.length === 0) {
-        document.getElementById('tabelaRelatorio').innerHTML = "<p>Nenhum registro encontrado.</p>";
-        return;
-      }
-
-      let totalEntrenos = 0;
-      let totalBrocado = 0;
-
-      let tabela = "<table><tr><th>Data</th><th>Código</th><th>Fazenda</th><th>Talhão</th><th>Entrenós</th><th>Brocado</th><th>% Brocamento</th></tr>";
-      filtrados.forEach(r => {
-        tabela += `<tr>
-          <td>${r.data}</td>
-          <td>${r.codigo}</td>
-          <td>${r.fazenda}</td>
-          <td>${r.talhao}</td>
-          <td>${r.entrenos}</td>
-          <td>${r.brocado}</td>
-          <td>${r.brocamento}%</td>
-        </tr>`;
-        totalEntrenos += r.entrenos;
-        totalBrocado += r.brocado;
-      });
-
-      const totalBrocamento = ((totalBrocado / totalEntrenos) * 100).toFixed(2);
-      tabela += `<tr style="background:#f1f1f1;font-weight:bold"><td colspan="4">TOTAL</td><td>${totalEntrenos}</td><td>${totalBrocado}</td><td>${totalBrocamento}%</td></tr>`;
-      tabela += "</table>";
-
-      document.getElementById('tabelaRelatorio').innerHTML = tabela;
-    }
-
     function renderExclusao() {
       const lista = document.getElementById("listaExclusao");
       if (registros.length === 0) {
@@ -368,15 +311,30 @@
       registros.splice(index, 1);
       localStorage.setItem('registros', JSON.stringify(registros));
       renderExclusao();
-      renderTabelaRelatorio();
     }
 
-    function gerarRelatorioPDF() {
-      alert("Relatório PDF ainda não atualizado.");
+    // PDF
+    async function gerarRelatorioPDF() {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      const colunas = ["Data", "Fazenda", "Talhão", "Entrenós", "Brocado", "Brocamento (%)"];
+      const linhas = registros.map(r => [r.data, r.fazenda, r.talhao, r.entrenos, r.brocado, r.brocamento]);
+      doc.text("Relatório de Inspeção de Cana", 14, 16);
+      doc.autoTable({ startY: 20, head: [colunas], body: linhas });
+      doc.save("relatorio-inspecao.pdf");
     }
 
+    // Excel (CSV)
     function exportarExcel() {
-      alert("Exportar para Excel ainda não implementado.");
+      let csv = "Data,Fazenda,Talhão,Entrenós,Brocado,Brocamento (%)\n";
+      registros.forEach(r => {
+        csv += `${r.data},${r.fazenda},${r.talhao},${r.entrenos},${r.brocado},${r.brocamento}\n`;
+      });
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "relatorio-inspecao.csv";
+      link.click();
     }
   </script>
 </body>
