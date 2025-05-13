@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Inspeção de Cana</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="manifest" href="manifest.json" />
   <style>
     :root {
       --bg: #f8f9fa;
@@ -13,31 +14,26 @@
       --white: #ffffff;
       --border: #ccc;
     }
-
     body {
       font-family: 'Segoe UI', sans-serif;
       margin: 0;
       background-color: var(--bg);
     }
-
     header {
       background-color: var(--primary);
       color: white;
       padding: 15px;
       text-align: center;
     }
-
     header img {
       max-height: 50px;
       display: block;
       margin: 0 auto 10px;
     }
-
     nav {
       display: flex;
       background-color: var(--accent);
     }
-
     nav button {
       flex: 1;
       padding: 15px;
@@ -47,30 +43,25 @@
       font-weight: bold;
       cursor: pointer;
     }
-
     nav button.active {
       background-color: var(--primary);
     }
-
     .container {
       max-width: 800px;
       margin: auto;
       padding: 20px;
     }
-
     .card {
       background-color: var(--white);
       padding: 20px;
       border-radius: 15px;
       box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
     }
-
     label {
       display: block;
       margin-top: 15px;
       font-weight: 600;
     }
-
     input {
       width: 100%;
       padding: 10px;
@@ -79,7 +70,6 @@
       margin-top: 5px;
       box-sizing: border-box;
     }
-
     button.save {
       background-color: var(--accent);
       color: white;
@@ -90,17 +80,14 @@
       font-weight: bold;
       cursor: pointer;
     }
-
     button.save:hover {
       background-color: var(--primary);
     }
-
     .resultado, #fazendaNome {
       margin-top: 15px;
       font-weight: bold;
       color: var(--primary);
     }
-
     table {
       width: 100%;
       margin-top: 20px;
@@ -108,29 +95,24 @@
       border-radius: 10px;
       overflow: hidden;
     }
-
     th, td {
       border: 1px solid var(--border);
       padding: 10px;
       text-align: center;
     }
-
     th {
       background-color: var(--accent);
       color: white;
     }
-
     .hidden {
       display: none;
     }
-
     .botoes-relatorio {
       margin-top: 20px;
       display: flex;
       justify-content: space-between;
       gap: 10px;
     }
-
     .botoes-relatorio button {
       flex: 1;
       padding: 12px;
@@ -141,7 +123,6 @@
       color: white;
       cursor: pointer;
     }
-
     .botoes-relatorio button:hover {
       background-color: var(--primary);
     }
@@ -155,8 +136,8 @@
   </header>
 
   <nav>
-    <button class="tab-btn active" onclick="mostrarTab(event, 'registro')">Registrar Inspeção</button>
-    <button class="tab-btn" onclick="mostrarTab(event, 'relatorio')">Relatório</button>
+    <button class="tab-btn active" onclick="mostrarTab('registro')">Registrar Inspeção</button>
+    <button class="tab-btn" onclick="mostrarTab('relatorio')">Relatório</button>
   </nav>
 
   <div class="container">
@@ -202,24 +183,14 @@
 
   </div>
 
-  <!-- Firebase -->
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+  <!-- Bibliotecas PDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
 
   <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyCdaENDtxZ_ojJbCAghEbGASX1eHz3mM00",
-      authDomain: "broca-bcebc.firebaseapp.com",
-      projectId: "broca-bcebc",
-      storageBucket: "broca-bcebc.appspot.com",
-      messagingSenderId: "63313643076",
-      appId: "1:63313643076:web:68bec75070315f386ade11",
-      measurementId: "G-FDYK3J0BF6"
-    };
-
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
-    db.enablePersistence().catch(console.error);
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js');
+    }
 
     const fazendas = {
       4012: "FAZ. LAGOA CERCADA",
@@ -227,7 +198,9 @@
       4045: "FAZ. MERINDO I"
     };
 
-    function mostrarTab(event, id) {
+    const registros = JSON.parse(localStorage.getItem('registros') || '[]');
+
+    function mostrarTab(id) {
       document.querySelectorAll('.tab-content').forEach(div => div.classList.add('hidden'));
       document.getElementById(id).classList.remove('hidden');
       document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
@@ -247,7 +220,6 @@
       const entrenos = parseInt(document.getElementById('entrenos').value);
       const brocado = parseInt(document.getElementById('brocado').value);
       const resultado = document.getElementById('resultado');
-
       if (!isNaN(entrenos) && !isNaN(brocado) && entrenos > 0) {
         const porcentagem = (brocado / entrenos) * 100;
         resultado.textContent = `Brocamento: ${porcentagem.toFixed(2)}%`;
@@ -270,17 +242,63 @@
       }
 
       const brocamento = ((brocado / entrenos) * 100).toFixed(2);
+      registros.push({ codigo, fazenda, data, talhao, entrenos, brocado, brocamento });
+      localStorage.setItem('registros', JSON.stringify(registros));
 
-      db.collection("inspecoes").add({ codigo, fazenda, data, talhao, entrenos, brocado, brocamento })
-        .then(() => {
-          alert("Inspeção salva com sucesso!");
-          document.querySelectorAll("#registro input").forEach(i => i.value = "");
-          document.getElementById('fazendaNome').textContent = "";
-          document.getElementById('resultado').textContent = "";
-        })
-        .catch(error => {
-          console.error("Erro ao salvar:", error);
-        });
+      alert("Inspeção registrada com sucesso!");
+
+      document.querySelectorAll("#registro input").forEach(i => i.value = "");
+      document.getElementById('fazendaNome').textContent = "";
+      document.getElementById('resultado').textContent = "";
+    }
+
+    function gerarRelatorioPDF() {
+      const inicio = document.getElementById('inicio').value;
+      const fim = document.getElementById('fim').value;
+      if (!inicio || !fim) {
+        alert("Preencha as datas de início e fim.");
+        return;
+      }
+
+      const filtrados = registros.filter(r => r.data >= inicio && r.data <= fim);
+      if (filtrados.length === 0) {
+        alert("Nenhum registro encontrado no período.");
+        return;
+      }
+
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      doc.text("Relatório de Inspeção de Cana", 14, 16);
+      doc.autoTable({
+        head: [["Data", "Código", "Fazenda", "Talhão", "Entrenós", "Brocado", "% Brocamento"]],
+        body: filtrados.map(r => [r.data, r.codigo, r.fazenda, r.talhao, r.entrenos, r.brocado, `${r.brocamento}%`]),
+        startY: 20
+      });
+      doc.save("relatorio.pdf");
+    }
+
+    function exportarExcel() {
+      const inicio = document.getElementById('inicio').value;
+      const fim = document.getElementById('fim').value;
+      const filtrados = registros.filter(r => r.data >= inicio && r.data <= fim);
+      if (filtrados.length === 0) {
+        alert("Nenhum registro encontrado.");
+        return;
+      }
+
+      let tabela = "<table><tr><th>Data</th><th>Código</th><th>Fazenda</th><th>Talhão</th><th>Entrenós</th><th>Brocado</th><th>% Brocamento</th></tr>";
+      filtrados.forEach(r => {
+        tabela += `<tr><td>${r.data}</td><td>${r.codigo}</td><td>${r.fazenda}</td><td>${r.talhao}</td><td>${r.entrenos}</td><td>${r.brocado}</td><td>${r.brocamento}%</td></tr>`;
+      });
+      tabela += "</table>";
+
+      const tipo = 'application/vnd.ms-excel';
+      const blob = new Blob([tabela], { type: tipo });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "relatorio.xls";
+      link.click();
     }
   </script>
 </body>
