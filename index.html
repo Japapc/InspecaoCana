@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <title>Inspeção de Cana</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="manifest" href="manifest.json" />
   <style>
     :root {
       --bg: #f8f9fa;
@@ -26,19 +25,26 @@
       text-align: center;
       position: relative;
     }
+    /* Menu hamburguer maior */
     .menu-toggle {
+      width: 40px;       /* largura maior */
+      height: 35px;      /* altura maior */
       position: absolute;
       left: 15px;
       top: 15px;
       background: none;
       border: none;
       cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-around;
+      padding: 0;
     }
     .menu-toggle div {
-      width: 25px;
-      height: 3px;
+      width: 100%;       /* ocupa toda a largura do botão */
+      height: 5px;       /* barras mais grossas */
       background-color: white;
-      margin: 5px 0;
+      border-radius: 2px;
     }
     .menu-dropdown {
       display: none;
@@ -103,7 +109,7 @@
     button.save:hover {
       background-color: var(--primary);
     }
-    .resultado, #fazendaNome {
+    .resultado {
       margin-top: 15px;
       font-weight: bold;
       color: var(--primary);
@@ -130,260 +136,516 @@
     .botoes-relatorio button:hover {
       background-color: var(--primary);
     }
-    .btn-excluir {
-      background-color: crimson;
-      color: white;
-      border: none;
-      padding: 6px 10px;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-    .btn-excluir:hover {
-      background-color: darkred;
-    }
   </style>
 </head>
 <body>
 
-  <header>
-    <button class="menu-toggle" onclick="toggleMenu()">
-      <div></div>
-      <div></div>
-      <div></div>
-    </button>
-    <div class="menu-dropdown" id="menuDropdown">
-      <button onclick="mostrarTab('registro')">Registrar Inspeção</button>
-      <button onclick="mostrarTab('relatorio')">Relatório</button>
-      <button onclick="mostrarTab('exclusao')">Excluir Lançamentos</button>
-    </div>
-    <h2>Inspeção de Cana</h2>
-  </header>
+<header>
+  <button class="menu-toggle" onclick="toggleMenu()">
+    <div></div>
+    <div></div>
+    <div></div>
+  </button>
+  <div class="menu-dropdown" id="menuDropdown">
+    <button onclick="mostrarTab('registro')">Registrar Inspeção</button>
+    <button onclick="mostrarTab('perdaCana')">Registrar Perda de Cana</button>
+    <button onclick="mostrarTab('relatorioBrocamento')">Gerar Relatório (Brocamento)</button>
+    <button onclick="mostrarTab('relatorioPerda')">Gerar Relatório (Perda de Cana)</button>
+    <button onclick="mostrarTab('exclusao')">Excluir Dados</button>
+  </div>
+  <h2>Inspeção de Cana</h2>
+</header>
 
-  <div class="container">
+<div class="container">
 
-    <!-- REGISTRO -->
-    <div id="registro" class="tab-content card">
-      <label for="codigo">Código da Fazenda:</label>
-      <input type="number" id="codigo" />
-      <div id="fazendaNome"></div>
+  <!-- Registro Inspeção -->
+  <div id="registro" class="tab-content card">
+    <label for="codigo">Código da Fazenda:</label>
+    <input type="number" id="codigo" />
+    <div id="fazendaNome"></div>
 
-      <label for="data">Data da Inspeção:</label>
-      <input type="date" id="data" />
+    <label for="data">Data da Inspeção:</label>
+    <input type="date" id="data" />
 
-      <label for="talhao">Talhão:</label>
-      <input type="text" id="talhao" />
+    <label for="talhao">Talhão:</label>
+    <input type="text" id="talhao" />
 
-      <label for="entrenos">Entrenós Contados:</label>
-      <input type="number" id="entrenos" />
+    <label for="entrenos">Entrenós Contados:</label>
+    <input type="number" id="entrenos" min="0" />
+    <label for="brocado">Quantidade de Brocado:</label>
+    <input type="number" id="brocado" min="0" />
 
-      <label for="brocado">Quantidade de Brocado:</label>
-      <input type="number" id="brocado" />
+    <div class="resultado" id="resultado"></div>
 
-      <div class="resultado" id="resultado"></div>
-
-      <button class="save" onclick="salvar()">Salvar Inspeção</button>
-    </div>
-
-    <!-- RELATÓRIO -->
-    <div id="relatorio" class="tab-content card hidden">
-      <label for="fazendaFiltro">Filtrar por Fazenda:</label>
-      <select id="fazendaFiltro">
-        <option value="">Todas</option>
-        <option value="4012">FAZ. LAGOA CERCADA</option>
-        <option value="4010">FAZ. PAULO MINEIRO</option>
-        <option value="4045">FAZ. MERINDO I</option>
-      </select>
-
-      <label for="inicio">Data Início:</label>
-      <input type="date" id="inicio">
-
-      <label for="fim">Data Fim:</label>
-      <input type="date" id="fim">
-
-      <div class="botoes-relatorio">
-        <button onclick="gerarRelatorioPDF()">Gerar Relatório (PDF)</button>
-        <button onclick="exportarExcel()">Exportar para Excel</button>
-      </div>
-    </div>
-
-    <!-- EXCLUSÃO -->
-    <div id="exclusao" class="tab-content card hidden">
-      <h3>Excluir Lançamentos</h3>
-      <p>Selecione um lançamento para excluir:</p>
-      <div id="listaExclusao"></div>
-    </div>
-
+    <button class="save" onclick="calcularESalvarBrocamento()">Salvar Inspeção</button>
   </div>
 
-  <!-- Bibliotecas externas -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+  <!-- Registro Perda de Cana -->
+  <div id="perdaCana" class="tab-content card hidden">
+    <label for="dataPerda">Data:</label>
+    <input type="date" id="dataPerda" />
 
-  <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js');
+    <label for="codigoPerda">Código da Fazenda:</label>
+    <input type="number" id="codigoPerda" />
+    <div id="fazendaNomePerda"></div>
+
+    <label for="frenteServico">Frente de Serviço:</label>
+    <input type="text" id="frenteServico" />
+
+    <label for="turno">Turno:</label>
+    <select id="turno">
+      <option value="A">A</option>
+      <option value="B">B</option>
+      <option value="C">C</option>
+    </select>
+
+    <label for="canaInteira">Cana Inteira:</label>
+    <input type="number" id="canaInteira" min="0" value="0" />
+
+    <label for="tolete">Tolete:</label>
+    <input type="number" id="tolete" min="0" value="0" />
+
+    <label for="toco">Toco:</label>
+    <input type="number" id="toco" min="0" value="0" />
+
+    <label for="ponta">Ponta:</label>
+    <input type="number" id="ponta" min="0" value="0" />
+
+    <label for="estilhaco">Estilhaço:</label>
+    <input type="number" id="estilhaco" min="0" value="0" />
+
+    <label for="pedaço">Pedaço:</label>
+    <input type="number" id="pedaço" min="0" value="0" />
+
+    <div class="resultado" id="resultadoPerda"></div>
+
+    <button class="save" onclick="calcularESalvarPerda()">Salvar Perda de Cana</button>
+  </div>
+
+  <!-- Relatório Brocamento -->
+  <div id="relatorioBrocamento" class="tab-content card hidden">
+    <h3>Relatório de Inspeção de Cana (Brocamento)</h3>
+    <label for="fazendaFiltroBrocamento">Filtrar por Fazenda:</label>
+    <select id="fazendaFiltroBrocamento">
+      <option value="">Todas</option>
+      <option value="4012">FAZ. LAGOA CERCADA</option>
+      <option value="4010">FAZ. PAULO MINEIRO</option>
+      <option value="4045">FAZ. MERINDO I</option>
+    </select>
+
+    <label for="inicioBrocamento">Data Início:</label>
+    <input type="date" id="inicioBrocamento" />
+
+    <label for="fimBrocamento">Data Fim:</label>
+    <input type="date" id="fimBrocamento" />
+
+    <div class="botoes-relatorio">
+      <button onclick="gerarRelatorioBrocamentoPDF()">Gerar Relatório (PDF)</button>
+      <button onclick="exportarBrocamentoExcel()">Exportar para Excel</button>
+    </div>
+  </div>
+
+  <!-- Relatório Perda de Cana -->
+  <div id="relatorioPerda" class="tab-content card hidden">
+    <h3>Relatório de Perda de Cana</h3>
+    <label for="fazendaFiltroPerda">Filtrar por Fazenda:</label>
+    <select id="fazendaFiltroPerda">
+      <option value="">Todas</option>
+      <option value="4012">FAZ. LAGOA CERCADA</option>
+      <option value="4010">FAZ. PAULO MINEIRO</option>
+      <option value="4045">FAZ. MERINDO I</option>
+    </select>
+
+    <label for="turnoFiltroPerda">Filtrar por Turno:</label>
+    <select id="turnoFiltroPerda">
+      <option value="">Todos</option>
+      <option value="A">A</option>
+      <option value="B">B</option>
+      <option value="C">C</option>
+    </select>
+
+    <label for="frenteFiltroPerda">Filtrar por Frente de Serviço:</label>
+    <input type="text" id="frenteFiltroPerda" placeholder="Digite Frente de Serviço" />
+
+    <label for="inicioPerda">Data Início:</label>
+    <input type="date" id="inicioPerda" />
+
+    <label for="fimPerda">Data Fim:</label>
+    <input type="date" id="fimPerda" />
+
+    <div class="botoes-relatorio">
+      <button onclick="gerarRelatorioPerdaPDF()">Gerar Relatório (PDF)</button>
+      <button onclick="exportarPerdaExcel()">Exportar para Excel</button>
+    </div>
+  </div>
+
+  <!-- Exclusão -->
+  <div id="exclusao" class="tab-content card hidden">
+    <h3>Excluir Lançamentos</h3>
+    <p>Selecione um lançamento para excluir:</p>
+    <div id="listaExclusao"></div>
+  </div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+
+<script>
+  const fazendas = {
+    4012: "FAZ. LAGOA CERCADA",
+    4010: "FAZ. PAULO MINEIRO",
+    4045: "FAZ. MERINDO I"
+  };
+
+  let registros = JSON.parse(localStorage.getItem('registros') || '[]');
+  let perdas = JSON.parse(localStorage.getItem('perdas') || '[]');
+
+  // Toggle menu
+  function toggleMenu() {
+    const dropdown = document.getElementById("menuDropdown");
+    dropdown.style.display = dropdown.style.display === "block" ? "none" : "block";
+  }
+
+  // Mostrar tab
+  function mostrarTab(id) {
+    document.querySelectorAll('.tab-content').forEach(div => div.classList.add('hidden'));
+    document.getElementById(id).classList.remove('hidden');
+    document.getElementById('menuDropdown').style.display = 'none';
+  }
+
+  // Atualiza nome da fazenda no cadastro de brocamento
+  document.getElementById('codigo').addEventListener('input', function() {
+    const nome = fazendas[this.value.trim()];
+    document.getElementById('fazendaNome').textContent = nome ? `Fazenda: ${nome}` : '';
+    calcularPorcentagemBrocamento();
+  });
+
+  // Atualiza nome da fazenda no cadastro de perda
+  document.getElementById('codigoPerda').addEventListener('input', function() {
+    const nome = fazendas[this.value.trim()];
+    document.getElementById('fazendaNomePerda').textContent = nome ? `Fazenda: ${nome}` : '';
+    calcularSomaPerda();
+  });
+
+  // Atualiza porcentagem brocamento ao mudar os inputs
+  document.getElementById('entrenos').addEventListener('input', calcularPorcentagemBrocamento);
+  document.getElementById('brocado').addEventListener('input', calcularPorcentagemBrocamento);
+
+  function calcularPorcentagemBrocamento() {
+    const entrenos = parseInt(document.getElementById('entrenos').value);
+    const brocado = parseInt(document.getElementById('brocado').value);
+    const resultado = document.getElementById('resultado');
+
+    if (!isNaN(entrenos) && !isNaN(brocado) && entrenos > 0) {
+      const porcentagem = (brocado / entrenos) * 100;
+      resultado.textContent = `Brocamento: ${porcentagem.toFixed(2).replace('.', ',')}%`;
+    } else {
+      resultado.textContent = '';
     }
+  }
 
-    const fazendas = {
-      4012: "FAZ. LAGOA CERCADA",
-      4010: "FAZ. PAULO MINEIRO",
-      4045: "FAZ. MERINDO I"
-    };
+  // Atualiza soma da perda ao mudar os inputs
+  ['canaInteira','tolete','toco','ponta','estilhaco','pedaço'].forEach(id => {
+    document.getElementById(id).addEventListener('input', calcularSomaPerda);
+  });
 
-    let registros = JSON.parse(localStorage.getItem('registros') || '[]');
+  function calcularSomaPerda() {
+    const campos = ['canaInteira','tolete','toco','ponta','estilhaco','pedaço'];
+    let soma = 0;
+    campos.forEach(id => {
+      let val = parseFloat(document.getElementById(id).value);
+      if (isNaN(val)) val = 0;
+      soma += val;
+    });
+    document.getElementById('resultadoPerda').textContent = `Total Perda: ${soma.toFixed(2).replace('.', ',')}`;
+  }
 
-    function toggleMenu() {
-      const dropdown = document.getElementById("menuDropdown");
-      dropdown.style.display = dropdown.style.display === "block" ? "none" : "block";
+  // Salvar brocamento
+  function calcularESalvarBrocamento() {
+    const entrenos = parseInt(document.getElementById('entrenos').value);
+    const brocado = parseInt(document.getElementById('brocado').value);
+
+    if (!isNaN(entrenos) && !isNaN(brocado) && entrenos > 0) {
+      const porcentagem = (brocado / entrenos) * 100;
+
+      registros.push({
+        codigo: document.getElementById('codigo').value.trim(),
+        fazenda: fazendas[document.getElementById('codigo').value.trim()],
+        data: document.getElementById('data').value,
+        talhao: document.getElementById('talhao').value.trim(),
+        entrenos,
+        brocado,
+        brocamento: porcentagem.toFixed(2).replace('.', ',')
+      });
+
+      localStorage.setItem('registros', JSON.stringify(registros));
+      alert("Inspeção salva com sucesso!");
+
+      // Reset campos
+      document.getElementById('codigo').value = '';
+      document.getElementById('fazendaNome').textContent = '';
+      document.getElementById('data').value = '';
+      document.getElementById('talhao').value = '';
+      document.getElementById('entrenos').value = '';
+      document.getElementById('brocado').value = '';
+      document.getElementById('resultado').textContent = '';
+
+      renderExclusao();
+    } else {
+      alert("Preencha os campos de entrenos e brocado corretamente.");
     }
+  }
 
-    function mostrarTab(id) {
-      document.querySelectorAll('.tab-content').forEach(div => div.classList.add('hidden'));
-      document.getElementById(id).classList.remove('hidden');
-      if (id === 'exclusao') renderExclusao();
-      document.getElementById('menuDropdown').style.display = 'none';
-    }
+  // Salvar perda
+  function calcularESalvarPerda() {
+    const canaInteira = parseFloat(document.getElementById('canaInteira').value) || 0;
+    const tolete = parseFloat(document.getElementById('tolete').value) || 0;
+    const toco = parseFloat(document.getElementById('toco').value) || 0;
+    const ponta = parseFloat(document.getElementById('ponta').value) || 0;
+    const estilhaco = parseFloat(document.getElementById('estilhaco').value) || 0;
+    const pedaço = parseFloat(document.getElementById('pedaço').value) || 0;
 
-    document.getElementById('codigo').addEventListener('input', function () {
-      const codigo = this.value.trim();
-      const nome = fazendas[codigo];
-      document.getElementById('fazendaNome').textContent = nome ? `Fazenda: ${nome}` : '';
+    const total = canaInteira + tolete + toco + ponta + estilhaco + pedaço;
+    const media = total / 6;
+
+    perdas.push({
+      data: document.getElementById('dataPerda').value,
+      codigo: document.getElementById('codigoPerda').value.trim(),
+      fazenda: fazendas[document.getElementById('codigoPerda').value.trim()],
+      frenteServico: document.getElementById('frenteServico').value.trim(),
+      turno: document.getElementById('turno').value,
+      canaInteira,
+      tolete,
+      toco,
+      ponta,
+      estilhaco,
+      pedaço,
+      total,
+      media: media.toFixed(2).replace('.', ',')
     });
 
-    document.getElementById('brocado').addEventListener('input', calcular);
-    document.getElementById('entrenos').addEventListener('input', calcular);
+    localStorage.setItem('perdas', JSON.stringify(perdas));
+    alert("Perda de Cana salva com sucesso!");
 
-    function calcular() {
-      const entrenos = parseInt(document.getElementById('entrenos').value);
-      const brocado = parseInt(document.getElementById('brocado').value);
-      const resultado = document.getElementById('resultado');
-      if (!isNaN(entrenos) && !isNaN(brocado) && entrenos > 0) {
-        const porcentagem = (brocado / entrenos) * 100;
-        resultado.textContent = `Brocamento: ${porcentagem.toFixed(2)}%`;
-      } else {
-        resultado.textContent = '';
-      }
-    }
+    // Reset campos
+    document.getElementById('dataPerda').value = '';
+    document.getElementById('codigoPerda').value = '';
+    document.getElementById('fazendaNomePerda').textContent = '';
+    document.getElementById('frenteServico').value = '';
+    document.getElementById('turno').value = 'A';
+    document.getElementById('canaInteira').value = '0';
+    document.getElementById('tolete').value = '0';
+    document.getElementById('toco').value = '0';
+    document.getElementById('ponta').value = '0';
+    document.getElementById('estilhaco').value = '0';
+    document.getElementById('pedaço').value = '0';
+    document.getElementById('resultadoPerda').textContent = '';
 
-    function salvar() {
-      const codigo = document.getElementById('codigo').value.trim();
-      const fazenda = fazendas[codigo] || "Desconhecida";
-      const data = document.getElementById('data').value;
-      const talhao = document.getElementById('talhao').value.trim();
-      const entrenos = parseInt(document.getElementById('entrenos').value);
-      const brocado = parseInt(document.getElementById('brocado').value);
+    renderExclusao();
+  }
 
-      if (!codigo || !data || !talhao || isNaN(entrenos) || isNaN(brocado)) {
-        alert("Preencha todos os campos corretamente.");
-        return;
-      }
+  // Relatório brocamento com média real de porcentagem (soma brocado / soma entrenos * 100)
+  function gerarRelatorioBrocamentoPDF() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    const colunas = ["Data", "Fazenda", "Talhão", "Entrenós", "Brocado", "Brocamento (%)"];
 
-      const brocamento = ((brocado / entrenos) * 100).toFixed(2);
-      registros.push({ codigo, fazenda, data, talhao, entrenos, brocado, brocamento });
-      localStorage.setItem('registros', JSON.stringify(registros));
+    const filtroFazenda = document.getElementById('fazendaFiltroBrocamento').value;
+    const inicio = document.getElementById('inicioBrocamento').value;
+    const fim = document.getElementById('fimBrocamento').value;
 
-      alert("Inspeção registrada com sucesso!");
-      document.querySelectorAll("#registro input").forEach(i => i.value = "");
-      document.getElementById('fazendaNome').textContent = "";
-      document.getElementById('resultado').textContent = "";
-    }
+    const dadosFiltrados = registros.filter(r => {
+      const dataValida = (!inicio || r.data >= inicio) && (!fim || r.data <= fim);
+      const fazendaValida = !filtroFazenda || r.codigo === filtroFazenda;
+      return dataValida && fazendaValida;
+    });
 
-    function renderExclusao() {
-      const lista = document.getElementById("listaExclusao");
-      if (registros.length === 0) {
-        lista.innerHTML = "<p>Nenhum lançamento encontrado.</p>";
-        return;
-      }
-      let html = "<table><tr><th>Data</th><th>Fazenda</th><th>Talhão</th><th>Ação</th></tr>";
-      registros.forEach((r, i) => {
-        html += `<tr>
-          <td>${r.data}</td>
-          <td>${r.fazenda}</td>
-          <td>${r.talhao}</td>
-          <td><button class="btn-excluir" onclick="excluir(${i})">Excluir</button></td>
-        </tr>`;
-      });
-      html += "</table>";
-      lista.innerHTML = html;
-    }
+    let somaEntrenos = 0;
+    let somaBrocado = 0;
 
-    function excluir(index) {
+    const linhas = dadosFiltrados.map(r => {
+      somaEntrenos += r.entrenos;
+      somaBrocado += r.brocado;
+      return [r.data, r.fazenda, r.talhao, r.entrenos, r.brocado, r.brocamento];
+    });
+
+    const mediaBrocamento = somaEntrenos > 0 ? ((somaBrocado / somaEntrenos) * 100).toFixed(2).replace('.', ',') : "0,00";
+
+    linhas.push(["", "MÉDIA", "", somaEntrenos, somaBrocado, mediaBrocamento]);
+
+    doc.text("Relatório de Inspeção de Cana (Brocamento)", 14, 16);
+    doc.autoTable({
+      startY: 20,
+      head: [colunas],
+      body: linhas,
+      styles: { fontSize: 10 },
+      footStyles: { fontStyle: 'bold' }
+    });
+
+    doc.save("relatorio-brocamento.pdf");
+  }
+
+  // Relatório perda com média na linha total
+  function gerarRelatorioPerdaPDF() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    const colunas = ["Data", "Frente de Serviço", "Turno", "Cana Inteira", "Tolete", "Toco", "Ponta", "Estilhaço", "Pedaço", "Total"];
+
+    const filtroFazenda = document.getElementById('fazendaFiltroPerda').value;
+    const filtroTurno = document.getElementById('turnoFiltroPerda').value;
+    const filtroFrente = document.getElementById('frenteFiltroPerda').value.toLowerCase();
+    const inicio = document.getElementById('inicioPerda').value;
+    const fim = document.getElementById('fimPerda').value;
+
+    const dadosFiltrados = perdas.filter(r => {
+      const dataValida = (!inicio || r.data >= inicio) && (!fim || r.data <= fim);
+      const fazendaValida = !filtroFazenda || r.codigo === filtroFazenda;
+      const turnoValido = !filtroTurno || r.turno === filtroTurno;
+      const frenteValida = !filtroFrente || (r.frenteServico && r.frenteServico.toLowerCase().includes(filtroFrente));
+      return dataValida && fazendaValida && turnoValido && frenteValida;
+    });
+
+    let somaCanaInteira = 0;
+    let somaTolete = 0;
+    let somaToco = 0;
+    let somaPonta = 0;
+    let somaEstilhaco = 0;
+    let somaPedaco = 0;
+    const totalRegistros = dadosFiltrados.length || 1;
+
+    const linhas = dadosFiltrados.map(r => {
+      somaCanaInteira += r.canaInteira;
+      somaTolete += r.tolete;
+      somaToco += r.toco;
+      somaPonta += r.ponta;
+      somaEstilhaco += r.estilhaco;
+      somaPedaco += r.pedaço;
+      return [
+        r.data,
+        r.frenteServico,
+        r.turno,
+        r.canaInteira.toFixed(2).replace('.', ','),
+        r.tolete.toFixed(2).replace('.', ','),
+        r.toco.toFixed(2).replace('.', ','),
+        r.ponta.toFixed(2).replace('.', ','),
+        r.estilhaco.toFixed(2).replace('.', ','),
+        r.pedaço.toFixed(2).replace('.', ','),
+        r.total.toFixed(2).replace('.', ',')
+      ];
+    });
+
+    const mediaCanaInteira = (somaCanaInteira / totalRegistros).toFixed(2).replace('.', ',');
+    const mediaTolete = (somaTolete / totalRegistros).toFixed(2).replace('.', ',');
+    const mediaToco = (somaToco / totalRegistros).toFixed(2).replace('.', ',');
+    const mediaPonta = (somaPonta / totalRegistros).toFixed(2).replace('.', ',');
+    const mediaEstilhaco = (somaEstilhaco / totalRegistros).toFixed(2).replace('.', ',');
+    const mediaPedaco = (somaPedaco / totalRegistros).toFixed(2).replace('.', ',');
+    const mediaTotal = ((somaCanaInteira + somaTolete + somaToco + somaPonta + somaEstilhaco + somaPedaco) / totalRegistros).toFixed(2).replace('.', ',');
+
+    linhas.push(["", "MÉDIA", "", mediaCanaInteira, mediaTolete, mediaToco, mediaPonta, mediaEstilhaco, mediaPedaco, mediaTotal]);
+
+    doc.text("Relatório de Perda de Cana", 14, 16);
+    doc.autoTable({
+      startY: 20,
+      head: [colunas],
+      body: linhas,
+      styles: { fontSize: 10 },
+      footStyles: { fontStyle: 'bold' }
+    });
+
+    doc.save("relatorio-perda-cana.pdf");
+  }
+
+  // Exportar CSV Brocamento
+  function exportarBrocamentoExcel() {
+    const filtroFazenda = document.getElementById('fazendaFiltroBrocamento').value;
+    const inicio = document.getElementById('inicioBrocamento').value;
+    const fim = document.getElementById('fimBrocamento').value;
+
+    const dadosFiltrados = registros.filter(r => {
+      const dataValida = (!inicio || r.data >= inicio) && (!fim || r.data <= fim);
+      const fazendaValida = !filtroFazenda || r.codigo === filtroFazenda;
+      return dataValida && fazendaValida;
+    });
+
+    let csv = "Data,Fazenda,Talhão,Entrenós,Brocado,Brocamento (%)\n";
+    dadosFiltrados.forEach(r => {
+      csv += `${r.data},${r.fazenda},${r.talhao},${r.entrenos},${r.brocado},${r.brocamento}\n`;
+    });
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "relatorio-brocamento.csv";
+    link.click();
+  }
+
+  // Exportar CSV Perda
+  function exportarPerdaExcel() {
+    const filtroFazenda = document.getElementById('fazendaFiltroPerda').value;
+    const filtroTurno = document.getElementById('turnoFiltroPerda').value;
+    const filtroFrente = document.getElementById('frenteFiltroPerda').value.toLowerCase();
+    const inicio = document.getElementById('inicioPerda').value;
+    const fim = document.getElementById('fimPerda').value;
+
+    const dadosFiltrados = perdas.filter(r => {
+      const dataValida = (!inicio || r.data >= inicio) && (!fim || r.data <= fim);
+      const fazendaValida = !filtroFazenda || r.codigo === filtroFazenda;
+      const turnoValido = !filtroTurno || r.turno === filtroTurno;
+      const frenteValida = !filtroFrente || (r.frenteServico && r.frenteServico.toLowerCase().includes(filtroFrente));
+      return dataValida && fazendaValida && turnoValido && frenteValida;
+    });
+
+    let csv = "Data,Frente de Serviço,Turno,Cana Inteira,Tolete,Toco,Ponta,Estilhaço,Pedaço,Total\n";
+    dadosFiltrados.forEach(r => {
+      csv += `${r.data},${r.frenteServico},${r.turno},${r.canaInteira},${r.tolete},${r.toco},${r.ponta},${r.estilhaco},${r.pedaço},${r.total}\n`;
+    });
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "relatorio-perda-cana.csv";
+    link.click();
+  }
+
+  // Excluir registro e atualizar lista
+  function excluirRegistro(tipo, index) {
+    if (tipo === 'brocamento') {
       registros.splice(index, 1);
       localStorage.setItem('registros', JSON.stringify(registros));
-      renderExclusao();
+    } else if (tipo === 'perda') {
+      perdas.splice(index, 1);
+      localStorage.setItem('perdas', JSON.stringify(perdas));
     }
+    alert('Registro excluído com sucesso!');
+    renderExclusao();
+  }
 
-    // PDF
-    async function gerarRelatorioPDF() {
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF();
-      const colunas = ["Data", "Fazenda", "Talhão", "Entrenós", "Brocado", "Brocamento (%)"];
+  // Renderiza lista exclusão atualizada
+  function renderExclusao() {
+    const listaExclusao = document.getElementById("listaExclusao");
+    listaExclusao.innerHTML = "";
 
-      const filtroFazenda = document.getElementById('fazendaFiltro').value;
-      const inicio = document.getElementById('inicio').value;
-      const fim = document.getElementById('fim').value;
+    let html = "<h4>Exclusão de Registros de Brocamento</h4>";
+    if (registros.length === 0) html += "<p>Nenhum registro de brocamento.</p>";
+    registros.forEach((r, i) => {
+      html += `<p>Data: ${r.data} | Fazenda: ${r.fazenda} | Talhão: ${r.talhao} 
+                <button onclick="excluirRegistro('brocamento', ${i})">Excluir</button></p>`;
+    });
 
-      const dadosFiltrados = registros.filter(r => {
-        const dataValida = (!inicio || r.data >= inicio) && (!fim || r.data <= fim);
-        const fazendaValida = !filtroFazenda || r.codigo === filtroFazenda;
-        return dataValida && fazendaValida;
-      });
+    html += "<h4>Exclusão de Registros de Perda de Cana</h4>";
+    if (perdas.length === 0) html += "<p>Nenhum registro de perda de cana.</p>";
+    perdas.forEach((r, i) => {
+      html += `<p>Data: ${r.data} | Fazenda: ${r.fazenda || 'N/D'} | Frente de Serviço: ${r.frenteServico} 
+                <button onclick="excluirRegistro('perda', ${i})">Excluir</button></p>`;
+    });
+    listaExclusao.innerHTML = html;
+  }
 
-      let totalEntrenos = 0;
-      let totalBrocado = 0;
+  renderExclusao(); // Inicializa exclusão
 
-      const linhas = dadosFiltrados.map(r => {
-        totalEntrenos += r.entrenos;
-        totalBrocado += r.brocado;
-        return [r.data, r.fazenda, r.talhao, r.entrenos, r.brocado, r.brocamento];
-      });
+</script>
 
-      const brocamentoTotal = totalEntrenos > 0 ? ((totalBrocado / totalEntrenos) * 100).toFixed(2) : "0.00";
-      linhas.push(["", "TOTAL", "", totalEntrenos, totalBrocado, brocamentoTotal]);
-
-      doc.text("Relatório de Inspeção de Cana", 14, 16);
-      doc.autoTable({
-        startY: 20,
-        head: [colunas],
-        body: linhas,
-        styles: { fontSize: 10 },
-        footStyles: { fontStyle: 'bold' }
-      });
-
-      doc.save("relatorio-inspecao.pdf");
-    }
-
-    // Excel (CSV)
-    function exportarExcel() {
-      const filtroFazenda = document.getElementById('fazendaFiltro').value;
-      const inicio = document.getElementById('inicio').value;
-      const fim = document.getElementById('fim').value;
-
-      const dadosFiltrados = registros.filter(r => {
-        const dataValida = (!inicio || r.data >= inicio) && (!fim || r.data <= fim);
-        const fazendaValida = !filtroFazenda || r.codigo === filtroFazenda;
-        return dataValida && fazendaValida;
-      });
-
-      let totalEntrenos = 0;
-      let totalBrocado = 0;
-
-      let csv = "Data,Fazenda,Talhão,Entrenós,Brocado,Brocamento (%)\n";
-      dadosFiltrados.forEach(r => {
-        csv += `${r.data},${r.fazenda},${r.talhao},${r.entrenos},${r.brocado},${r.brocamento}\n`;
-        totalEntrenos += r.entrenos;
-        totalBrocado += r.brocado;
-      });
-
-      const brocamentoTotal = totalEntrenos > 0 ? ((totalBrocado / totalEntrenos) * 100).toFixed(2) : "0.00";
-      csv += `,,TOTAL,${totalEntrenos},${totalBrocado},${brocamentoTotal}\n`;
-
-      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-      const link = document.createElement("a");
-      link.href = URL.createObjectURL(blob);
-      link.download = "relatorio-inspecao.csv";
-      link.click();
-    }
-  </script>
 </body>
 </html>
