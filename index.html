@@ -1,1297 +1,1327 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Inspeção de Cana</title>
-<style>
-  :root {
-    --color-primary: #2d6a4f;
-    --color-accent: #40916c;
-    --color-bg: #f8f9fa;
-    --color-text: #212529;
-    --color-white: #fff;
-    --color-border: #ccc;
-    --color-danger: #dc3545;
-    --shadow: rgba(0,0,0,0.15);
-    --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  }
-  * {
-    box-sizing: border-box;
-  }
-  body {
-    margin: 0;
-    font-family: var(--font-family);
-    background-color: var(--color-bg);
-    color: var(--color-text);
-  }
-  header {
-    position: fixed;
-    top: 0; left: 0; right: 0;
-    height: 60px;
-    background: var(--color-primary);
-    color: var(--color-white);
-    display: flex;
-    align-items: center;
-    padding: 0 20px;
-    box-shadow: 0 3px 8px var(--shadow);
-    z-index: 1000;
-    user-select: none;
-  }
-  header h1 {
-    margin: 0;
-    font-weight: 700;
-    font-size: 22px;
-    flex-grow: 1;
-    text-align: center;
-  }
-  .menu-toggle {
-    background: rgba(255, 255, 255, 0.9);
-    border-radius: 8px;
-    border: none;
-    cursor: pointer;
-    width: 50px;
-    height: 40px;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-around;
-    padding: 6px 8px;
-    z-index: 1100;
-    box-shadow: 0 0 6px rgba(0,0,0,0.3);
-  }
-  .menu-toggle div {
-    height: 5px;
-    background: #333;
-    border-radius: 3px;
-  }
-  nav.menu {
-    position: fixed;
-    top: 60px; left: 0; bottom: 0;
-    width: 240px;
-    background: var(--color-white);
-    border-right: 1px solid var(--color-border);
-    box-shadow: 3px 0 10px var(--shadow);
-    overflow-y: auto;
-    transform: translateX(-100%);
-    transition: transform 0.3s ease;
-    z-index: 999;
-    border-top-right-radius: 20px;
-    border-bottom-right-radius: 20px;
-  }
-  nav.menu.open {
-    transform: translateX(0);
-  }
-  .menu-btn, .excluir-btn {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
-    width: 100%;
-    padding: 18px 15px 22px;
-    background: none;
-    border: none;
-    font-weight: 700;
-    color: var(--color-text);
-    cursor: pointer;
-    border-bottom: 1px solid #eee;
-    font-size: 15px;
-    position: relative;
-    user-select: none;
-    transition: background-color 0.3s ease;
-    border-radius: 0;
-  }
-  .menu-btn:hover, .excluir-btn:hover {
-    background-color: var(--color-accent);
-    color: var(--color-white);
-    border-radius: 20px;
-  }
-  .menu-btn.active, .excluir-btn.active {
-    background-color: var(--color-accent);
-    color: var(--color-white);
-    border-radius: 20px;
-  }
-  .menu-btn .arrow {
-    position: absolute;
-    right: 16px;
-    top: 50%;
-    transform: translateY(-50%) rotate(0deg);
-    transition: transform 0.3s ease;
-    font-size: 16px;
-  }
-  .menu-btn.active .arrow {
-    transform: translateY(-50%) rotate(90deg);
-  }
-  .menu-icon {
-    width: 70px;
-    height: 70px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 3px solid var(--color-accent);
-    box-shadow: 0 2px 6px rgba(64,145,108,0.4);
-    user-select: none;
-  }
-  .icon-excluir {
-    width: 70px;
-    height: 70px;
-    border-radius: 50%;
-    background: var(--color-danger);
-    color: var(--color-white);
-    font-weight: 900;
-    font-size: 42px;
-    line-height: 70px;
-    text-align: center;
-    user-select: none;
-    border: 3px solid var(--color-accent);
-    box-shadow: 0 2px 6px rgba(220,53,69,0.7);
-  }
-  nav.submenu {
-    position: fixed;
-    top: 60px;
-    left: 240px;
-    width: 220px;
-    bottom: 0;
-    background: var(--color-white);
-    border-left: 1px solid var(--color-border);
-    box-shadow: -3px 0 10px var(--shadow);
-    overflow-y: auto;
-    display: none;
-    z-index: 998;
-    border-top-left-radius: 20px;
-    border-bottom-left-radius: 20px;
-  }
-  nav.submenu.open {
-    display: block;
-  }
-  nav.submenu button {
-    width: 100%;
-    padding: 16px 20px;
-    background: none;
-    border: none;
-    text-align: left;
-    font-size: 16px;
-    cursor: pointer;
-    font-weight: 600;
-    border-bottom: 1px solid #eee;
-    color: var(--color-text);
-    transition: background-color 0.3s ease;
-    border-radius: 0;
-  }
-  nav.submenu button:hover {
-    background-color: var(--color-accent);
-    color: var(--color-white);
-    border-radius: 20px;
-  }
-  main.content {
-    margin-top: 60px;
-    padding: 28px 35px;
-    transition: margin-left 0.3s ease;
-  }
-  main.content.menu-open {
-    margin-left: 460px;
-  }
-  .tab-content {
-    display: none;
-  }
-  .tab-content.active {
-    display: block;
-  }
-  .card {
-    background: var(--color-white);
-    padding: 30px 30px;
-    border-radius: 16px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-    font-size: 17px;
-  }
-  label {
-    display: block;
-    margin-top: 20px;
-    font-weight: 700;
-    color: var(--color-primary);
-    font-size: 15px;
-  }
-  input, select {
-    width: 100%;
-    padding: 14px;
-    margin-top: 8px;
-    border-radius: 10px;
-    border: 1px solid var(--color-border);
-    font-size: 16px;
-    transition: box-shadow 0.2s ease, border-color 0.2s ease;
-  }
-  input:focus, select:focus {
-    border-color: var(--color-accent);
-    box-shadow: 0 0 8px var(--color-accent);
-    outline: none;
-  }
-  button.save {
-    margin-top: 32px;
-    background-color: var(--color-accent);
-    color: var(--color-white);
-    border: none;
-    padding: 18px;
-    border-radius: 12px;
-    font-size: 20px;
-    font-weight: 800;
-    cursor: pointer;
-    box-shadow: 0 7px 20px rgba(64,145,108,0.5);
-    transition: background-color 0.3s ease;
-  }
-  button.save:hover {
-    background-color: var(--color-primary);
-    box-shadow: 0 9px 25px rgba(45,106,79,0.7);
-  }
-  .resultado {
-    margin-top: 30px;
-    font-weight: 700;
-    color: var(--color-primary);
-    font-size: 21px;
-  }
-  .botoes-relatorio {
-    margin-top: 38px;
-    display: flex;
-    gap: 20px;
-  }
-  .botoes-relatorio button {
-    flex: 1;
-    padding: 18px;
-    font-weight: 800;
-    font-size: 18px;
-    border: none;
-    border-radius: 12px;
-    background-color: var(--color-accent);
-    color: var(--color-white);
-    cursor: pointer;
-    box-shadow: 0 7px 20px rgba(64,145,108,0.55);
-    transition: background-color 0.3s ease;
-  }
-  .botoes-relatorio button:hover {
-    background-color: var(--color-primary);
-    box-shadow: 0 9px 28px rgba(45,106,79,0.8);
-  }
-  .btn-excluir {
-    padding: 5px 14px;
-    margin-left: 10px;
-    border-radius: 8px;
-    border: none;
-    background-color: var(--color-danger);
-    color: var(--color-white);
-    cursor: pointer;
-    font-weight: 700;
-    font-size: 15px;
-    transition: background-color 0.3s ease;
-  }
-  .btn-excluir:hover {
-    background-color: #a71d2a;
-  }
-  nav.menu::-webkit-scrollbar,
-  nav.submenu::-webkit-scrollbar {
-    width: 8px;
-  }
-  nav.menu::-webkit-scrollbar-thumb,
-  nav.submenu::-webkit-scrollbar-thumb {
-    background: var(--color-accent);
-    border-radius: 10px;
-  }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Inspeção de Cana</title>
+  <style>
+    :root {
+      --color-primary: #2d6a4f;
+      --color-accent: #40916c;
+      --color-bg: #f8f9fa;
+      --color-text: #212529;
+      --color-white: #fff;
+      --color-border: #ccc;
+      --color-danger: #dc3545;
+      --shadow: rgba(0, 0, 0, 0.15);
+      --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
 
-  /* Alert styles */
-  #alertContainer {
-    position: fixed;
-    top: 15px;
-    right: 15px;
-    background-color: rgba(34, 139, 34, 0.9);
-    color: #fff;
-    padding: 14px 22px;
-    border-radius: 12px;
-    font-weight: 700;
-    font-size: 16px;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.4s ease, transform 0.4s ease;
-    transform: translateY(-20px);
-    z-index: 1500;
-  }
-  #alertContainer.show {
-    opacity: 1;
-    pointer-events: auto;
-    transform: translateY(0);
-  }
+    * {
+      box-sizing: border-box;
+    }
 
-  /* Responsividade */
-  @media (max-width: 900px) {
+    body {
+      margin: 0;
+      font-family: var(--font-family);
+      background-color: var(--color-bg);
+      color: var(--color-text);
+    }
+
+    header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 60px;
+      background: var(--color-primary);
+      color: var(--color-white);
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      box-shadow: 0 3px 8px var(--shadow);
+      z-index: 1000;
+      user-select: none;
+    }
+
+    header h1 {
+      margin: 0;
+      font-weight: 700;
+      font-size: 22px;
+      flex-grow: 1;
+      text-align: center;
+    }
+
+    .menu-toggle {
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      width: 50px;
+      height: 40px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-around;
+      padding: 6px 8px;
+      z-index: 1100;
+      box-shadow: 0 0 6px rgba(0, 0, 0, 0.3);
+    }
+
+    .menu-toggle div {
+      height: 5px;
+      background: #333;
+      border-radius: 3px;
+    }
+
     nav.menu {
-      width: 200px;
-      border-radius: 0 20px 20px 0;
+      position: fixed;
+      top: 60px;
+      left: 0;
+      bottom: 0;
+      width: 240px;
+      background: var(--color-white);
+      border-right: 1px solid var(--color-border);
+      box-shadow: 3px 0 10px var(--shadow);
+      overflow-y: auto;
+      transform: translateX(-100%);
+      transition: transform 0.3s ease;
+      z-index: 999;
+      border-top-right-radius: 20px;
+      border-bottom-right-radius: 20px;
     }
-    nav.submenu {
-      left: 200px;
-      width: 180px;
-      border-radius: 0 0 0 20px;
+
+    .menu-icon {
+  width: 70px; /* Reduzido de 70px para 30px */
+  height: 70px; /* Reduzido de 70px para 30px */
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid var(--color-accent);
+  box-shadow: 0 2px 6px rgba(64,145,108,0.4);
+  user-select: none;
+   }
+
+    nav.menu.open {
+      transform: translateX(0);
     }
-    main.content.menu-open {
-      margin-left: 380px;
+
+    .menu-btn, .excluir-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      width: 100%;
+      padding: 18px 15px 22px;
+      background: none;
+      border: none;
+      font-weight: 700;
+      color: var(--color-text);
+      cursor: pointer;
+      border-bottom: 1px solid #eee;
+      font-size: 15px;
+      position: relative;
+      user-select: none;
+      transition: background-color 0.3s ease;
+      border-radius: 0;
     }
-  }
-  @media (max-width: 700px) {
-    nav.menu,
+
+    .menu-btn:hover, .excluir-btn:hover {
+      background-color: var(--color-accent);
+      color: var(--color-white);
+      border-radius: 20px;
+    }
+
+    .menu-btn.active, .excluir-btn.active {
+      background-color: var(--color-accent);
+      color: var(--color-white);
+      border-radius: 20px;
+    }
+
+    .menu-btn .arrow {
+      position: absolute;
+      right: 16px;
+      top: 50%;
+      transform: translateY(-50%) rotate(0deg);
+      transition: transform 0.3s ease;
+      font-size: 16px;
+    }
+
+    .menu-btn.active .arrow {
+      transform: translateY(-50%) rotate(90deg);
+    }
+
     nav.submenu {
       position: fixed;
       top: 60px;
-      bottom: auto;
-      height: auto;
-      width: 100%;
-      max-height: 300px;
-      border-radius: 0;
-      box-shadow: 0 3px 15px var(--shadow);
+      left: 240px;
+      width: 220px;
+      bottom: 0;
+      background: var(--color-white);
+      border-left: 1px solid var(--color-border);
+      box-shadow: -3px 0 10px var(--shadow);
       overflow-y: auto;
-      transform: translateY(-100%);
-      transition: transform 0.3s ease;
-      left: 0 !important;
+      display: none;
+      z-index: 998;
+      border-top-left-radius: 20px;
+      border-bottom-left-radius: 20px;
     }
-    nav.menu.open,
+
     nav.submenu.open {
+      display: block;
+    }
+
+    nav.submenu button {
+      width: 100%;
+      padding: 16px 20px;
+      background: none;
+      border: none;
+      text-align: left;
+      font-size: 16px;
+      cursor: pointer;
+      font-weight: 600;
+      border-bottom: 1px solid #eee;
+      color: var(--color-text);
+      transition: background-color 0.3s ease;
+      border-radius: 0;
+    }
+
+    nav.submenu button:hover {
+      background-color: var(--color-accent);
+      color: var(--color-white);
+      border-radius: 20px;
+    }
+
+    main.content {
+      margin-top: 60px;
+      padding: 28px 35px;
+      transition: margin-left 0.3s ease;
+    }
+
+    main.content.menu-open {
+      margin-left: 460px;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    .card {
+      background: var(--color-white);
+      padding: 30px 30px;
+      border-radius: 16px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      font-size: 17px;
+    }
+
+    label {
+      display: block;
+      margin-top: 20px;
+      font-weight: 700;
+      color: var(--color-primary);
+      font-size: 15px;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 14px;
+      margin-top: 8px;
+      border-radius: 10px;
+      border: 1px solid var(--color-border);
+      font-size: 16px;
+      transition: box-shadow 0.2s ease, border-color 0.2s ease;
+    }
+
+    input:focus, select:focus {
+      border-color: var(--color-accent);
+      box-shadow: 0 0 8px var(--color-accent);
+      outline: none;
+    }
+
+    button.save {
+      margin-top: 32px;
+      background-color: var(--color-accent);
+      color: var(--color-white);
+      border: none;
+      padding: 18px;
+      border-radius: 12px;
+      font-size: 20px;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 7px 20px rgba(64,145,108,0.5);
+      transition: background-color 0.3s ease;
+    }
+
+    button.save:hover {
+      background-color: var(--color-primary);
+      box-shadow: 0 9px 25px rgba(45,106,79,0.7);
+    }
+
+    .resultado {
+      margin-top: 30px;
+      font-weight: 700;
+      color: var(--color-primary);
+      font-size: 21px;
+    }
+
+    .botoes-relatorio {
+      margin-top: 38px;
+      display: flex;
+      gap: 20px;
+    }
+
+    .botoes-relatorio button {
+      flex: 1;
+      padding: 18px;
+      font-weight: 800;
+      font-size: 18px;
+      border: none;
+      border-radius: 12px;
+      background-color: var(--color-accent);
+      color: var(--color-white);
+      cursor: pointer;
+      box-shadow: 0 7px 20px rgba(64,145,108,0.55);
+      transition: background-color 0.3s ease;
+    }
+
+    .botoes-relatorio button:hover {
+      background-color: var(--color-primary);
+      box-shadow: 0 9px 28px rgba(45,106,79,0.8);
+    }
+
+    .btn-excluir {
+      padding: 5px 14px;
+      margin-left: 10px;
+      border-radius: 8px;
+      border: none;
+      background-color: var(--color-danger);
+      color: var(--color-white);
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 15px;
+      transition: background-color 0.3s ease;
+    }
+
+    .btn-excluir:hover {
+      background-color: #a71d2a;
+    }
+
+    nav.menu::-webkit-scrollbar,
+    nav.submenu::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    nav.menu::-webkit-scrollbar-thumb,
+    nav.submenu::-webkit-scrollbar-thumb {
+      background: var(--color-accent);
+      border-radius: 10px;
+    }
+
+    /* Alert styles */
+    #alertContainer {
+      position: fixed;
+      top: 15px;
+      right: 15px;
+      background-color: rgba(34, 139, 34, 0.9);
+      color: #fff;
+      padding: 14px 22px;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 16px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.4s ease, transform 0.4s ease;
+      transform: translateY(-20px);
+      z-index: 1500;
+    }
+
+    #alertContainer.show {
+      opacity: 1;
+      pointer-events: auto;
       transform: translateY(0);
     }
-    main.content.menu-open {
-      margin-left: 0;
-      margin-top: 360px;
-    }
-    nav.submenu {
-      top: calc(60px + 300px);
-    }
-  }
-</style>
-</head>
-<body>
 
-<header>
-  <button class="menu-toggle" id="btnToggleMenu" aria-label="Abrir menu" aria-expanded="false" aria-controls="menu">
-    <div></div><div></div><div></div>
-  </button>
-  <h1>Inspeção de Cana</h1>
-</header>
+    /* Responsividade */
+    @media (max-width: 900px) {
+      nav.menu {
+        width: 200px;
+        border-radius: 0 20px 20px 0;
+      }
 
-<nav class="menu" id="menu" aria-label="Menu Principal" tabindex="-1">
-  <button class="menu-btn" id="btnDashboard" aria-haspopup="false" aria-label="Dashboard" type="button">
-    <img src="https://toppng.com/uploads/preview/dashboard-svg-icon-free-dashboard-icon-11553444664o1utwdkesz.png" alt="Ícone Dashboard" class="menu-icon" />
-    Dashboard
-  </button>
-  <button class="menu-btn" id="btnBroca" aria-expanded="false" aria-haspopup="true" aria-controls="submenuBroca" aria-label="Broca" type="button">
-    <img src="https://img.freepik.com/vetores-premium/icone-da-broca-africana-da-cana-de-acucar_873668-332.jpg" alt="Ícone Broca" class="menu-icon" />
-    Broca
-    <span class="arrow">▶</span>
-  </button>
-  <button class="menu-btn" id="btnPerda" aria-expanded="false" aria-haspopup="true" aria-controls="submenuPerda" aria-label="Perda" type="button">
-    <img src="https://cdn-icons-png.flaticon.com/512/750/750896.png" alt="Ícone Perda" class="menu-icon" />
-    Perda
-    <span class="arrow">▶</span>
-  </button>
-  <button class="excluir-btn" id="btnExcluirDados" aria-haspopup="false" aria-label="Excluir Dados" type="button">
-    <div class="icon-excluir" aria-hidden="true">×</div>
-    Excluir Dados
-  </button>
-</nav>
+      nav.submenu {
+        left: 200px;
+        width: 180px;
+        border-radius: 0 0 0 20px;
+      }
 
-<nav class="submenu" id="submenuBroca" aria-label="Submenu Broca" role="menu" aria-hidden="true" tabindex="-1">
-  <button role="menuitem" type="button" data-target="lançamentoBroca">Lançamento</button>
-  <button role="menuitem" type="button" data-target="relatorioBroca">Relatório</button>
-</nav>
-
-<nav class="submenu" id="submenuPerda" aria-label="Submenu Perda" role="menu" aria-hidden="true" tabindex="-1">
-  <button role="menuitem" type="button" data-target="lançamentoPerda">Lançamento</button>
-  <button role="menuitem" type="button" data-target="relatorioPerda">Relatório</button>
-</nav>
-
-<main class="content" id="content">
-
-  <!-- Dashboard -->
-  <section id="dashboard" class="tab-content card" aria-label="Dashboard" tabindex="0" hidden>
-    <h2>Dashboard</h2>
-    <canvas id="graficoBrocamento" width="400" height="200"></canvas>
-    <canvas id="graficoPerda" width="400" height="200" style="margin-top: 40px;"></canvas>
-  </section>
-
-  <!-- Brocamento Lançamento -->
-  <section id="lançamentoBroca" class="tab-content card" aria-label="Lançamento Broca" tabindex="0" hidden>
-    <h2>Lançamento Broca</h2>
-    <label for="codigo">Código da Fazenda:</label>
-    <input type="number" id="codigo" aria-describedby="fazendaNome" />
-    <div id="fazendaNome" aria-live="polite" style="font-weight:bold; color: var(--color-primary); margin-top: 4px;"></div>
-
-    <label for="data">Data da Inspeção:</label>
-    <input type="date" id="data" />
-
-    <label for="talhao">Talhão:</label>
-    <input type="text" id="talhao" />
-
-    <label for="entrenos">Entrenós Contados:</label>
-    <input type="number" id="entrenos" min="0" />
-    <label for="brocado">Quantidade de Brocado:</label>
-    <input type="number" id="brocado" min="0" />
-
-    <div class="resultado" id="resultado"></div>
-
-    <button class="save" type="button" id="btnSalvarBrocamento">Salvar Inspeção</button>
-  </section>
-
-  <!-- Brocamento Relatório -->
-  <section id="relatorioBroca" class="tab-content card" aria-label="Relatório Broca" tabindex="0" hidden>
-    <h2>Relatório de Inspeção de Cana (Brocamento)</h2>
-    <label for="fazendaFiltroBrocamento">Filtrar por Fazenda:</label>
-    <select id="fazendaFiltroBrocamento">
-      <option value="">Todas</option>
-      <option value="4012">FAZ. LAGOA CERCADA</option>
-      <option value="4010">FAZ. PAULO MINEIRO</option>
-      <option value="4045">FAZ. MERINDO I</option>
-    </select>
-
-    <label for="inicioBrocamento">Data Início:</label>
-    <input type="date" id="inicioBrocamento" />
-
-    <label for="fimBrocamento">Data Fim:</label>
-    <input type="date" id="fimBrocamento" />
-
-    <div class="botoes-relatorio">
-      <button id="btnPDFBrocamento" type="button">Gerar Relatório (PDF)</button>
-      <button id="btnExcelBrocamento" type="button">Exportar para Excel</button>
-    </div>
-  </section>
-
-  <!-- Perda Lançamento -->
-  <section id="lançamentoPerda" class="tab-content card" aria-label="Lançamento Perda" tabindex="0" hidden>
-    <h2>Lançamento Perda</h2>
-    <label for="dataPerda">Data:</label>
-    <input type="date" id="dataPerda" />
-
-    <label for="codigoPerda">Código da Fazenda:</label>
-    <input type="number" id="codigoPerda" aria-describedby="fazendaNomePerda" />
-    <div id="fazendaNomePerda" aria-live="polite" style="font-weight:bold; color: var(--color-primary); margin-top: 4px;"></div>
-
-    <label for="talhaoPerda">Talhão:</label>
-    <input type="text" id="talhaoPerda" />
-
-    <label for="frenteServico">Frente de Serviço:</label>
-    <input type="text" id="frenteServico" />
-
-    <label for="turno">Turno:</label>
-    <select id="turno">
-      <option value="A">A</option>
-      <option value="B">B</option>
-      <option value="C">C</option>
-    </select>
-
-    <label for="canaInteira">Cana Inteira:</label>
-    <input type="number" id="canaInteira" min="0" value="0" />
-
-    <label for="tolete">Tolete:</label>
-    <input type="number" id="tolete" min="0" value="0" />
-
-    <label for="toco">Toco:</label>
-    <input type="number" id="toco" min="0" value="0" />
-
-    <label for="ponta">Ponta:</label>
-    <input type="number" id="ponta" min="0" value="0" />
-
-    <label for="estilhaco">Estilhaço:</label>
-    <input type="number" id="estilhaco" min="0" value="0" />
-
-    <label for="pedaco">Pedaço:</label> <!-- Alterado ID para pedaco -->
-    <input type="number" id="pedaco" min="0" value="0" />
-
-    <div class="resultado" id="resultadoPerda"></div>
-
-    <button class="save" type="button" id="btnSalvarPerda">Salvar Perda de Cana</button>
-  </section>
-
-  <!-- Perda Relatório -->
-  <section id="relatorioPerda" class="tab-content card" aria-label="Relatório Perda" tabindex="0" hidden>
-    <h2>Relatório de Perda de Cana</h2>
-    <label for="fazendaFiltroPerda">Filtrar por Fazenda:</label>
-    <select id="fazendaFiltroPerda">
-      <option value="">Todas</option>
-      <option value="4012">FAZ. LAGOA CERCADA</option>
-      <option value="4010">FAZ. PAULO MINEIRO</option>
-      <option value="4045">FAZ. MERINDO I</option>
-    </select>
-
-    <label for="talhaoFiltroPerda">Filtrar por Talhão:</label>
-    <input type="text" id="talhaoFiltroPerda" placeholder="Digite Talhão" />
-
-    <label for="turnoFiltroPerda">Filtrar por Turno:</label>
-    <select id="turnoFiltroPerda">
-      <option value="">Todos</option>
-      <option value="A">A</option>
-      <option value="B">B</option>
-      <option value="C">C</option>
-    </select>
-
-    <label for="frenteFiltroPerda">Filtrar por Frente de Serviço:</label>
-    <input type="text" id="frenteFiltroPerda" placeholder="Digite Frente de Serviço" />
-
-    <label for="inicioPerda">Data Início:</label>
-    <input type="date" id="inicioPerda" />
-
-    <label for="fimPerda">Data Fim:</label>
-    <input type="date" id="fimPerda" />
-
-    <div class="botoes-relatorio">
-      <button id="btnPDFPerda" type="button">Gerar Relatório (PDF)</button>
-      <button id="btnExcelPerda" type="button">Exportar para Excel</button>
-    </div>
-  </section>
-
-  <!-- Exclusão -->
-  <section id="excluirDados" class="tab-content card" aria-label="Excluir Lançamentos" tabindex="0" hidden>
-    <h2>Excluir Lançamentos</h2>
-    <p>Selecione um lançamento para excluir:</p>
-    <div id="listaExclusao" tabindex="0"></div>
-  </section>
-
-</main>
-
-<div id="alertContainer" role="alert" aria-live="assertive"></div>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
-
-<script>
-  // Dados das fazendas
-  const fazendas = {
-    4012: "FAZ. LAGOA CERCADA",
-    4010: "FAZ. PAULO MINEIRO",
-    4045: "FAZ. MERINDO I"
-  };
-
-  // Recupera registros do localStorage ou inicializa arrays vazios
-  let registros = JSON.parse(localStorage.getItem('registros') || '[]');
-  let perdas = JSON.parse(localStorage.getItem('perdas') || '[]');
-
-  // Elementos principais
-  const btnToggleMenu = document.getElementById('btnToggleMenu');
-  const menu = document.getElementById('menu');
-  const submenuBroca = document.getElementById('submenuBroca');
-  const submenuPerda = document.getElementById('submenuPerda');
-  const btnBroca = document.getElementById('btnBroca');
-  const btnPerda = document.getElementById('btnPerda');
-  const btnExcluirDados = document.getElementById('btnExcluirDados');
-  const btnDashboard = document.getElementById('btnDashboard');
-  const content = document.getElementById('content');
-  const alertContainer = document.getElementById('alertContainer');
-
-  /**
-   * Exibe alerta com mensagem e tipo (success ou error)
-   */
-  function showAlert(message, type = 'success') {
-    alertContainer.textContent = message;
-    alertContainer.style.backgroundColor = type === 'error' ? 'rgba(220,53,69,0.9)' : 'rgba(34, 139, 34, 0.9)';
-    alertContainer.classList.add('show');
-    setTimeout(() => {
-      alertContainer.classList.remove('show');
-    }, 3000);
-  }
-
-  /**
-   * Alterna visibilidade do menu lateral
-   */
-  btnToggleMenu.addEventListener('click', () => {
-    const aberto = menu.classList.toggle('open');
-    btnToggleMenu.setAttribute('aria-expanded', aberto ? 'true' : 'false');
-    if (aberto) {
-      content.classList.add('menu-open');
-    } else {
-      content.classList.remove('menu-open');
-      closeAllMenus();
-    }
-  });
-
-  /**
-   * Fecha todos submenus e limpa estados ativos
-   */
-  function closeAllMenus() {
-    btnBroca.setAttribute('aria-expanded', 'false');
-    btnBroca.classList.remove('active');
-    btnPerda.setAttribute('aria-expanded', 'false');
-    btnPerda.classList.remove('active');
-    submenuBroca.setAttribute('aria-hidden', 'true');
-    submenuBroca.classList.remove('open');
-    submenuPerda.setAttribute('aria-hidden', 'true');
-    submenuPerda.classList.remove('open');
-    btnExcluirDados.classList.remove('active');
-  }
-
-  /**
-   * Esconde todas as abas (tabs)
-   */
-  function hideAllTabs() {
-    document.querySelectorAll('.tab-content').forEach(tab => {
-      tab.classList.remove('active');
-      tab.hidden = true;
-    });
-  }
-
-  /**
-   * Mostra aba (tab) específica
-   */
-  function mostrarTab(id) {
-    hideAllTabs();
-    const el = document.getElementById(id);
-    if(el) {
-      el.classList.add('active');
-      el.hidden = false;
-      el.focus();
-    }
-  }
-
-  /**
-   * Abre ou fecha submenu do botão informado
-   */
-  function abrirSubmenu(botao, submenu) {
-    const isOpen = botao.getAttribute('aria-expanded') === 'true';
-    closeAllMenus();
-    hideAllTabs();
-
-    if (!isOpen) {
-      botao.setAttribute('aria-expanded', 'true');
-      botao.classList.add('active');
-      submenu.classList.add('open');
-      submenu.setAttribute('aria-hidden', 'false');
-      submenu.focus();
-    } else {
-      submenu.classList.remove('open');
-      submenu.setAttribute('aria-hidden', 'true');
-    }
-  }
-
-  // Event delegation para menus
-  btnBroca.addEventListener('click', e => {
-    e.stopPropagation();
-    abrirSubmenu(btnBroca, submenuBroca);
-  });
-
-  btnPerda.addEventListener('click', e => {
-    e.stopPropagation();
-    abrirSubmenu(btnPerda, submenuPerda);
-  });
-
-  submenuBroca.addEventListener('click', e => {
-    if(e.target.matches('button[data-target]')) {
-      mostrarTab(e.target.dataset.target);
-      closeAllMenus();
-    }
-  });
-
-  submenuPerda.addEventListener('click', e => {
-    if(e.target.matches('button[data-target]')) {
-      mostrarTab(e.target.dataset.target);
-      closeAllMenus();
-    }
-  });
-
-  btnExcluirDados.addEventListener('click', () => {
-    closeAllMenus();
-    hideAllTabs();
-    mostrarTab('excluirDados');
-    renderExclusao();
-    btnExcluirDados.classList.add('active');
-  });
-
-  btnDashboard.addEventListener('click', () => {
-    closeAllMenus();
-    hideAllTabs();
-    mostrarDashboard();
-  });
-
-  // Fecha menus ao clicar fora
-  document.addEventListener('click', e => {
-    if (!menu.contains(e.target) && !submenuBroca.contains(e.target) && !submenuPerda.contains(e.target) && e.target !== btnToggleMenu) {
-      closeAllMenus();
-    }
-  });
-
-  // Avança para próximo input ao pressionar ENTER
-  document.addEventListener('keydown', function(e) {
-    if (e.key === 'Enter') {
-      const formElements = Array.from(document.querySelectorAll('input, select, textarea'));
-      const index = formElements.indexOf(document.activeElement);
-      if (index > -1 && index < formElements.length - 1) {
-        e.preventDefault();
-        formElements[index + 1].focus();
+      main.content.menu-open {
+        margin-left: 380px;
       }
     }
-  });
 
-  // Atualiza nome da fazenda no lançamento Broca e calcula porcentagem
-  document.getElementById('codigo').addEventListener('input', function () {
-    const nome = fazendas[this.value.trim()];
-    document.getElementById('fazendaNome').textContent = nome ? `Fazenda: ${nome}` : '';
-    calcularPorcentagemBrocamento();
-  });
-  // Atualiza nome da fazenda no lançamento Perda e calcula soma
-  document.getElementById('codigoPerda').addEventListener('input', function () {
-    const nome = fazendas[this.value.trim()];
-    document.getElementById('fazendaNomePerda').textContent = nome ? `Fazenda: ${nome}` : '';
-    calcularSomaPerda();
-  });
+    @media (max-width: 700px) {
+      nav.menu,
+      nav.submenu {
+        position: fixed;
+        top: 60px;
+        bottom: auto;
+        height: auto;
+        width: 100%;
+        max-height: 300px;
+        border-radius: 0;
+        box-shadow: 0 3px 15px var(--shadow);
+        overflow-y: auto;
+        transform: translateY(-100%);
+        transition: transform 0.3s ease;
+        left: 0 !important;
+      }
 
-  // Escuta inputs para calcular porcentagem de brocamento
-  ['entrenos', 'brocado'].forEach(id => {
-    document.getElementById(id).addEventListener('input', calcularPorcentagemBrocamento);
-  });
+      nav.menu.open,
+      nav.submenu.open {
+        transform: translateY(0);
+      }
 
-  // Calcula porcentagem brocamento
-  function calcularPorcentagemBrocamento() {
-    const entrenos = parseInt(document.getElementById('entrenos').value);
-    const brocado = parseInt(document.getElementById('brocado').value);
-    const resultado = document.getElementById('resultado');
+      main.content.menu-open {
+        margin-left: 0;
+        margin-top: 360px;
+      }
 
-    if (!isNaN(entrenos) && !isNaN(brocado) && entrenos > 0) {
+      nav.submenu {
+        top: calc(60px + 300px);
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <button class="menu-toggle" id="btnToggleMenu" aria-label="Abrir menu" aria-expanded="false" aria-controls="menu">
+      <div></div><div></div><div></div>
+    </button>
+    <h1>Inspeção de Cana</h1>
+  </header>
+
+  <nav class="menu" id="menu" aria-label="Menu Principal" tabindex="-1">
+    <button class="menu-btn" id="btnDashboard" aria-haspopup="false" aria-label="Dashboard" type="button">
+      <img src="https://toppng.com/uploads/preview/dashboard-svg-icon-free-dashboard-icon-11553444664o1utwdkesz.png" alt="Ícone Dashboard" class="menu-icon" />
+      Dashboard
+    </button>
+    <button class="menu-btn" id="btnBroca" aria-expanded="false" aria-haspopup="true" aria-controls="submenuBroca" aria-label="Broca" type="button">
+      <img src="https://img.freepik.com/vetores-premium/icone-da-broca-africana-da-cana-de-acucar_873668-332.jpg" alt="Ícone Broca" class="menu-icon" />
+      Broca
+      <span class="arrow">▶</span>
+    </button>
+    <button class="menu-btn" id="btnPerda" aria-expanded="false" aria-haspopup="true" aria-controls="submenuPerda" aria-label="Perda" type="button">
+      <img src="https://cdn-icons-png.flaticon.com/512/750/750896.png" alt="Ícone Perda" class="menu-icon" />
+      Perda
+      <span class="arrow">▶</span>
+    </button>
+    <button class="excluir-btn" id="btnExcluirDados" aria-haspopup="false" aria-label="Excluir Dados" type="button">
+      <div class="icon-excluir" aria-hidden="true">×</div>
+      Excluir Dados
+    </button>
+  </nav>
+
+  <nav class="submenu" id="submenuBroca" aria-label="Submenu Broca" role="menu" aria-hidden="true" tabindex="-1">
+    <button role="menuitem" type="button" data-target="lançamentoBroca">Lançamento</button>
+    <button role="menuitem" type="button" data-target="relatorioBroca">Relatório</button>
+  </nav>
+
+  <nav class="submenu" id="submenuPerda" aria-label="Submenu Perda" role="menu" aria-hidden="true" tabindex="-1">
+    <button role="menuitem" type="button" data-target="lançamentoPerda">Lançamento</button>
+    <button role="menuitem" type="button" data-target="relatorioPerda">Relatório</button>
+  </nav>
+
+  <main class="content" id="content">
+    <!-- Dashboard -->
+    <section id="dashboard" class="tab-content card" aria-label="Dashboard" tabindex="0" hidden>
+      <h2>Dashboard</h2>
+      <canvas id="graficoBrocamento" width="400" height="200"></canvas>
+      <canvas id="graficoPerda" width="400" height="200" style="margin-top: 40px;"></canvas>
+    </section>
+
+    <!-- Brocamento Lançamento -->
+    <section id="lançamentoBroca" class="tab-content card" aria-label="Lançamento Broca" tabindex="0" hidden>
+      <h2>Lançamento Broca</h2>
+      <label for="codigo">Código da Fazenda:</label>
+      <input type="number" id="codigo" aria-describedby="fazendaNome" />
+      <div id="fazendaNome" aria-live="polite" style="font-weight:bold; color: var(--color-primary); margin-top: 4px;"></div>
+
+      <label for="data">Data da Inspeção:</label>
+      <input type="date" id="data" />
+
+      <label for="talhao">Talhão:</label>
+      <input type="text" id="talhao" />
+
+      <label for="entrenos">Entrenós Contados:</label>
+      <input type="number" id="entrenos" min="0" />
+      <label for="brocado">Quantidade de Brocado:</label>
+      <input type="number" id="brocado" min="0" />
+
+      <div class="resultado" id="resultado"></div>
+
+      <button class="save" type="button" id="btnSalvarBrocamento">Salvar Inspeção</button>
+    </section>
+
+    <!-- Brocamento Relatório -->
+    <section id="relatorioBroca" class="tab-content card" aria-label="Relatório Broca" tabindex="0" hidden>
+      <h2>Relatório de Inspeção de Cana (Brocamento)</h2>
+      <label for="fazendaFiltroBrocamento">Filtrar por Fazenda:</label>
+      <select id="fazendaFiltroBrocamento">
+        <option value="">Todas</option>
+        <option value="4012">FAZ. LAGOA CERCADA</option>
+        <option value="4010">FAZ. PAULO MINEIRO</option>
+        <option value="4045">FAZ. MERINDO I</option>
+      </select>
+
+      <label for="inicioBrocamento">Data Início:</label>
+      <input type="date" id="inicioBrocamento" />
+
+      <label for="fimBrocamento">Data Fim:</label>
+      <input type="date" id="fimBrocamento" />
+
+      <div class="botoes-relatorio">
+        <button id="btnPDFBrocamento" type="button">Gerar Relatório (PDF)</button>
+        <button id="btnExcelBrocamento" type="button">Exportar para Excel</button>
+      </div>
+    </section>
+
+    <!-- Perda Lançamento -->
+    <section id="lançamentoPerda" class="tab-content card" aria-label="Lançamento Perda" tabindex="0" hidden>
+      <h2>Lançamento Perda</h2>
+      <label for="dataPerda">Data:</label>
+      <input type="date" id="dataPerda" />
+
+      <label for="codigoPerda">Código da Fazenda:</label>
+      <input type="number" id="codigoPerda" aria-describedby="fazendaNomePerda" />
+      <div id="fazendaNomePerda" aria-live="polite" style="font-weight:bold; color: var(--color-primary); margin-top: 4px;"></div>
+
+      <label for="talhaoPerda">Talhão:</label>
+      <input type="text" id="talhaoPerda" />
+
+      <label for="frenteServico">Frente de Serviço:</label>
+      <input type="text" id="frenteServico" />
+
+      <label for="turno">Turno:</label>
+      <select id="turno">
+        <option value="A">A</option>
+        <option value="B">B</option>
+        <option value="C">C</option>
+      </select>
+
+      <label for="canaInteira">Cana Inteira:</label>
+      <input type="number" id="canaInteira" min="0" value="0" />
+
+      <label for="tolete">Tolete:</label>
+      <input type="number" id="tolete" min="0" value="0" />
+
+      <label for="toco">Toco:</label>
+      <input type="number" id="toco" min="0" value="0" />
+
+      <label for="ponta">Ponta:</label>
+      <input type="number" id="ponta" min="0" value="0" />
+
+      <label for="estilhaco">Estilhaço:</label>
+      <input type="number" id="estilhaco" min="0" value="0" />
+
+      <label for="pedaco">Pedaço:</label> <!-- Alterado ID para pedaco -->
+      <input type="number" id="pedaco" min="0" value="0" />
+
+      <div class="resultado" id="resultadoPerda"></div>
+
+      <button class="save" type="button" id="btnSalvarPerda">Salvar Perda de Cana</button>
+    </section>
+
+    <!-- Perda Relatório -->
+    <section id="relatorioPerda" class="tab-content card" aria-label="Relatório Perda" tabindex="0" hidden>
+      <h2>Relatório de Perda de Cana</h2>
+      <label for="fazendaFiltroPerda">Filtrar por Fazenda:</label>
+      <select id="fazendaFiltroPerda">
+        <option value="">Todas</option>
+        <option value="4012">FAZ. LAGOA CERCADA</option>
+        <option value="4010">FAZ. PAULO MINEIRO</option>
+        <option value="4045">FAZ. MERINDO I</option>
+      </select>
+
+      <label for="talhaoFiltroPerda">Filtrar por Talhão:</label>
+      <input type="text" id="talhaoFiltroPerda" placeholder="Digite Talhão" />
+
+      <label for="turnoFiltroPerda">Filtrar por Turno:</label>
+      <select id="turnoFiltroPerda">
+        <option value="">Todos</option>
+        <option value="A">A</option>
+        <option value="B">B</option>
+        <option value="C">C</option>
+      </select>
+
+      <label for="frenteFiltroPerda">Filtrar por Frente de Serviço:</label>
+      <input type="text" id="frenteFiltroPerda" placeholder="Digite Frente de Serviço" />
+
+      <label for="inicioPerda">Data Início:</label>
+      <input type="date" id="inicioPerda" />
+
+      <label for="fimPerda">Data Fim:</label>
+      <input type="date" id="fimPerda" />
+
+      <div class="botoes-relatorio">
+        <button id="btnPDFPerda" type="button">Gerar Relatório (PDF)</button>
+        <button id="btnExcelPerda" type="button">Exportar para Excel</button>
+      </div>
+    </section>
+
+    <!-- Exclusão -->
+    <section id="excluirDados" class="tab-content card" aria-label="Excluir Lançamentos" tabindex="0" hidden>
+      <h2>Excluir Lançamentos</h2>
+      <p>Selecione um lançamento para excluir:</p>
+      <div id="listaExclusao" tabindex="0"></div>
+    </section>
+  </main>
+
+  <div id="alertContainer" role="alert" aria-live="assertive"></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+
+  <script>
+    // Dados das fazendas
+    const fazendas = {
+      4012: "FAZ. LAGOA CERCADA",
+      4010: "FAZ. PAULO MINEIRO",
+      4045: "FAZ. MERINDO I"
+    };
+
+    // Recupera registros do localStorage ou inicializa arrays vazios
+    let registros = JSON.parse(localStorage.getItem('registros') || '[]');
+    let perdas = JSON.parse(localStorage.getItem('perdas') || '[]');
+
+    // Elementos principais
+    const btnToggleMenu = document.getElementById('btnToggleMenu');
+    const menu = document.getElementById('menu');
+    const submenuBroca = document.getElementById('submenuBroca');
+    const submenuPerda = document.getElementById('submenuPerda');
+    const btnBroca = document.getElementById('btnBroca');
+    const btnPerda = document.getElementById('btnPerda');
+    const btnExcluirDados = document.getElementById('btnExcluirDados');
+    const btnDashboard = document.getElementById('btnDashboard');
+    const content = document.getElementById('content');
+    const alertContainer = document.getElementById('alertContainer');
+
+    /**
+     * Exibe alerta com mensagem e tipo (success ou error)
+     */
+    function showAlert(message, type = 'success') {
+      alertContainer.textContent = message;
+      alertContainer.style.backgroundColor = type === 'error' ? 'rgba(220,53,69,0.9)' : 'rgba(34, 139, 34, 0.9)';
+      alertContainer.classList.add('show');
+      setTimeout(() => {
+        alertContainer.classList.remove('show');
+      }, 3000);
+    }
+
+    /**
+     * Alterna visibilidade do menu lateral
+     */
+    btnToggleMenu.addEventListener('click', () => {
+      const aberto = menu.classList.toggle('open');
+      btnToggleMenu.setAttribute('aria-expanded', aberto ? 'true' : 'false');
+      if (aberto) {
+        content.classList.add('menu-open');
+      } else {
+        content.classList.remove('menu-open');
+        closeAllMenus();
+      }
+    });
+
+    /**
+     * Fecha todos submenus e limpa estados ativos
+     */
+    function closeAllMenus() {
+      btnBroca.setAttribute('aria-expanded', 'false');
+      btnBroca.classList.remove('active');
+      btnPerda.setAttribute('aria-expanded', 'false');
+      btnPerda.classList.remove('active');
+      submenuBroca.setAttribute('aria-hidden', 'true');
+      submenuBroca.classList.remove('open');
+      submenuPerda.setAttribute('aria-hidden', 'true');
+      submenuPerda.classList.remove('open');
+      btnExcluirDados.classList.remove('active');
+    }
+
+    /**
+     * Esconde todas as abas (tabs)
+     */
+    function hideAllTabs() {
+      document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.classList.remove('active');
+        tab.hidden = true;
+      });
+    }
+
+    /**
+     * Mostra aba (tab) específica
+     */
+    function mostrarTab(id) {
+      hideAllTabs();
+      const el = document.getElementById(id);
+      if(el) {
+        el.classList.add('active');
+        el.hidden = false;
+        el.focus();
+      }
+    }
+
+    /**
+     * Abre ou fecha submenu do botão informado
+     */
+    function abrirSubmenu(botao, submenu) {
+      const isOpen = botao.getAttribute('aria-expanded') === 'true';
+      closeAllMenus();
+      hideAllTabs();
+
+      if (!isOpen) {
+        botao.setAttribute('aria-expanded', 'true');
+        botao.classList.add('active');
+        submenu.classList.add('open');
+        submenu.setAttribute('aria-hidden', 'false');
+        submenu.focus();
+      } else {
+        submenu.classList.remove('open');
+        submenu.setAttribute('aria-hidden', 'true');
+      }
+    }
+
+    // Event delegation para menus
+    btnBroca.addEventListener('click', e => {
+      e.stopPropagation();
+      abrirSubmenu(btnBroca, submenuBroca);
+    });
+
+    btnPerda.addEventListener('click', e => {
+      e.stopPropagation();
+      abrirSubmenu(btnPerda, submenuPerda);
+    });
+
+    submenuBroca.addEventListener('click', e => {
+      if(e.target.matches('button[data-target]')) {
+        mostrarTab(e.target.dataset.target);
+        closeAllMenus();
+      }
+    });
+
+    submenuPerda.addEventListener('click', e => {
+      if(e.target.matches('button[data-target]')) {
+        mostrarTab(e.target.dataset.target);
+        closeAllMenus();
+      }
+    });
+
+    btnExcluirDados.addEventListener('click', () => {
+      closeAllMenus();
+      hideAllTabs();
+      mostrarTab('excluirDados');
+      renderExclusao();
+      btnExcluirDados.classList.add('active');
+    });
+
+    btnDashboard.addEventListener('click', () => {
+      closeAllMenus();
+      hideAllTabs();
+      mostrarDashboard(); // Agora a função de renderização de gráficos será chamada
+    });
+
+    // Fecha menus ao clicar fora
+    document.addEventListener('click', e => {
+      if (!menu.contains(e.target) && !submenuBroca.contains(e.target) && !submenuPerda.contains(e.target) && e.target !== btnToggleMenu) {
+        closeAllMenus();
+      }
+    });
+
+    // Avança para próximo input ao pressionar ENTER
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        const formElements = Array.from(document.querySelectorAll('input, select, textarea'));
+        const index = formElements.indexOf(document.activeElement);
+        if (index > -1 && index < formElements.length - 1) {
+          e.preventDefault();
+          formElements[index + 1].focus();
+        }
+      }
+    });
+
+    // Atualiza nome da fazenda no lançamento Broca e calcula porcentagem
+    document.getElementById('codigo').addEventListener('input', function () {
+      const nome = fazendas[this.value.trim()];
+      document.getElementById('fazendaNome').textContent = nome ? `Fazenda: ${nome}` : '';
+      calcularPorcentagemBrocamento();
+    });
+
+    // Atualiza nome da fazenda no lançamento Perda e calcula soma
+    document.getElementById('codigoPerda').addEventListener('input', function () {
+      const nome = fazendas[this.value.trim()];
+      document.getElementById('fazendaNomePerda').textContent = nome ? `Fazenda: ${nome}` : '';
+      calcularSomaPerda();
+    });
+
+    // Escuta inputs para calcular porcentagem de brocamento
+    ['entrenos', 'brocado'].forEach(id => {
+      document.getElementById(id).addEventListener('input', calcularPorcentagemBrocamento);
+    });
+
+    // Calcula porcentagem brocamento
+    function calcularPorcentagemBrocamento() {
+      const entrenos = parseInt(document.getElementById('entrenos').value);
+      const brocado = parseInt(document.getElementById('brocado').value);
+      const resultado = document.getElementById('resultado');
+
+      if (!isNaN(entrenos) && !isNaN(brocado) && entrenos > 0) {
+        const porcentagem = (brocado / entrenos) * 100;
+        resultado.textContent = `Brocamento: ${porcentagem.toFixed(2).replace('.', ',')}%`;
+      } else {
+        resultado.textContent = '';
+      }
+    }
+
+    // Escuta inputs para calcular soma perda
+    ['canaInteira', 'tolete', 'toco', 'ponta', 'estilhaco', 'pedaco'].forEach(id => {
+      document.getElementById(id).addEventListener('input', calcularSomaPerda);
+    });
+
+    // Calcula soma total perda
+    function calcularSomaPerda() {
+      const campos = ['canaInteira', 'tolete', 'toco', 'ponta', 'estilhaco', 'pedaco'];
+      let soma = 0;
+      campos.forEach(id => {
+        let val = parseFloat(document.getElementById(id).value);
+        if (isNaN(val)) val = 0;
+        soma += val;
+      });
+      document.getElementById('resultadoPerda').textContent = `Total Perda: ${soma.toFixed(2).replace('.', ',')}`;
+    }
+
+    // Salvar inspeção Brocamento
+    document.getElementById('btnSalvarBrocamento').addEventListener('click', () => {
+      const entrenos = parseInt(document.getElementById('entrenos').value);
+      const brocado = parseInt(document.getElementById('brocado').value);
+
+      if (isNaN(entrenos) || entrenos <= 0 || isNaN(brocado)) {
+        showAlert('Preencha corretamente os campos de entrenos e brocado.', 'error');
+        return;
+      }
+
       const porcentagem = (brocado / entrenos) * 100;
-      resultado.textContent = `Brocamento: ${porcentagem.toFixed(2).replace('.', ',')}%`;
-    } else {
-      resultado.textContent = '';
-    }
-  }
 
-  // Escuta inputs para calcular soma perda
-  ['canaInteira', 'tolete', 'toco', 'ponta', 'estilhaco', 'pedaco'].forEach(id => {
-    document.getElementById(id).addEventListener('input', calcularSomaPerda);
-  });
-
-  // Calcula soma total perda
-  function calcularSomaPerda() {
-    const campos = ['canaInteira', 'tolete', 'toco', 'ponta', 'estilhaco', 'pedaco'];
-    let soma = 0;
-    campos.forEach(id => {
-      let val = parseFloat(document.getElementById(id).value);
-      if (isNaN(val)) val = 0;
-      soma += val;
-    });
-    document.getElementById('resultadoPerda').textContent = `Total Perda: ${soma.toFixed(2).replace('.', ',')}`;
-  }
-
-  // Salvar inspeção Brocamento
-  document.getElementById('btnSalvarBrocamento').addEventListener('click', () => {
-    const entrenos = parseInt(document.getElementById('entrenos').value);
-    const brocado = parseInt(document.getElementById('brocado').value);
-
-    if (isNaN(entrenos) || entrenos <= 0 || isNaN(brocado)) {
-      showAlert('Preencha corretamente os campos de entrenos e brocado.', 'error');
-      return;
-    }
-
-    const porcentagem = (brocado / entrenos) * 100;
-
-    registros.push({
-      codigo: document.getElementById('codigo').value.trim(),
-      fazenda: fazendas[document.getElementById('codigo').value.trim()],
-      data: document.getElementById('data').value,
-      talhao: document.getElementById('talhao').value.trim(),
-      entrenos,
-      brocado,
-      brocamento: porcentagem.toFixed(2).replace('.', ',')
-    });
-
-    localStorage.setItem('registros', JSON.stringify(registros));
-    showAlert('Inspeção salva com sucesso!', 'success');
-
-    // Limpa formulário
-    document.getElementById('codigo').value = '';
-    document.getElementById('fazendaNome').textContent = '';
-    document.getElementById('data').value = '';
-    document.getElementById('talhao').value = '';
-    document.getElementById('entrenos').value = '';
-    document.getElementById('brocado').value = '';
-    document.getElementById('resultado').textContent = '';
-
-    // Mantém foco no primeiro campo
-    document.getElementById('codigo').focus();
-
-    renderGraficoBrocamento();
-  });
-
-  // Salvar perda de cana
-  document.getElementById('btnSalvarPerda').addEventListener('click', () => {
-    const dataPerda = document.getElementById('dataPerda').value;
-    const codigoPerda = document.getElementById('codigoPerda').value.trim();
-    const frenteServico = document.getElementById('frenteServico').value.trim();
-    const talhaoPerda = document.getElementById('talhaoPerda').value.trim();
-    const turno = document.getElementById('turno').value;
-
-    if (!dataPerda || !codigoPerda || !frenteServico || !talhaoPerda) {
-      showAlert('Preencha todos os campos antes de salvar.', 'error');
-      return;
-    }
-
-    const canaInteira = parseFloat(document.getElementById('canaInteira').value) || 0;
-    const tolete = parseFloat(document.getElementById('tolete').value) || 0;
-    const toco = parseFloat(document.getElementById('toco').value) || 0;
-    const ponta = parseFloat(document.getElementById('ponta').value) || 0;
-    const estilhaco = parseFloat(document.getElementById('estilhaco').value) || 0;
-    const pedaco = parseFloat(document.getElementById('pedaco').value) || 0;
-
-    const total = canaInteira + tolete + toco + ponta + estilhaco + pedaco;
-    const media = total / 6;
-
-    perdas.push({
-      data: dataPerda,
-      codigo: codigoPerda,
-      fazenda: fazendas[codigoPerda],
-      frenteServico,
-      turno,
-      talhao: talhaoPerda,
-      canaInteira,
-      tolete,
-      toco,
-      ponta,
-      estilhaco,
-      pedaço: pedaco,
-      total,
-      media: media.toFixed(2).replace('.', ',')
-    });
-
-    localStorage.setItem('perdas', JSON.stringify(perdas));
-    showAlert('Perda de Cana salva com sucesso!', 'success');
-
-    // Limpa formulário
-    document.getElementById('dataPerda').value = '';
-    document.getElementById('codigoPerda').value = '';
-    document.getElementById('fazendaNomePerda').textContent = '';
-    document.getElementById('frenteServico').value = '';
-    document.getElementById('turno').value = 'A';
-    document.getElementById('talhaoPerda').value = '';
-    document.getElementById('canaInteira').value = '0';
-    document.getElementById('tolete').value = '0';
-    document.getElementById('toco').value = '0';
-    document.getElementById('ponta').value = '0';
-    document.getElementById('estilhaco').value = '0';
-    document.getElementById('pedaco').value = '0';
-    document.getElementById('resultadoPerda').textContent = '';
-
-    document.getElementById('dataPerda').focus();
-
-    renderGraficoPerda();
-  });
-
-  /**
-   * Gera PDF do relatório Brocamento usando jsPDF
-   */
-  function gerarRelatorioBrocamentoPDF() {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({ orientation: 'landscape' });
-    const colunas = ["Data", "Fazenda", "Talhão", "Entrenós", "Brocado", "Brocamento (%)"];
-
-    const filtroFazenda = document.getElementById('fazendaFiltroBrocamento').value;
-    const inicio = document.getElementById('inicioBrocamento').value;
-    const fim = document.getElementById('fimBrocamento').value;
-
-    const dadosFiltrados = registros.filter(r => {
-      const dataValida = (!inicio || r.data >= inicio) && (!fim || r.data <= fim);
-      const fazendaValida = !filtroFazenda || r.codigo === filtroFazenda;
-      return dataValida && fazendaValida;
-    });
-
-    let totalEntrenos = 0;
-    let totalBrocado = 0;
-
-    const linhas = dadosFiltrados.map(r => {
-      totalEntrenos += r.entrenos;
-      totalBrocado += r.brocado;
-      return [r.data, r.fazenda, r.talhao, r.entrenos, r.brocado, r.brocamento];
-    });
-
-    const brocamentoTotal = totalEntrenos > 0 ? ((totalBrocado / totalEntrenos) * 100).toFixed(2).replace('.', ',') : "0,00";
-    linhas.push(["", "TOTAL", "", totalEntrenos, totalBrocado, brocamentoTotal]);
-
-    doc.text("Relatório de Inspeção de Cana (Brocamento)", 14, 16);
-    doc.autoTable({
-      startY: 20,
-      head: [colunas],
-      body: linhas,
-      styles: { fontSize: 10, overflow: 'linebreak' },
-      footStyles: { fontStyle: 'bold' },
-      margin: { left: 10, right: 10 },
-    });
-
-    doc.save("relatorio-brocamento.pdf");
-  }
-
-  /**
-   * Exporta CSV do relatório Brocamento
-   */
-  function exportarBrocamentoExcel() {
-    const filtroFazenda = document.getElementById('fazendaFiltroBrocamento').value;
-    const inicio = document.getElementById('inicioBrocamento').value;
-    const fim = document.getElementById('fimBrocamento').value;
-
-    const dadosFiltrados = registros.filter(r => {
-      const dataValida = (!inicio || r.data >= inicio) && (!fim || r.data <= fim);
-      const fazendaValida = !filtroFazenda || r.codigo === filtroFazenda;
-      return dataValida && fazendaValida;
-    });
-
-    let totalEntrenos = 0;
-    let totalBrocado = 0;
-
-    let csv = "Data;Fazenda;Talhão;Entrenós;Brocado;Brocamento (%)\n";
-    dadosFiltrados.forEach(r => {
-      csv += `${r.data};${r.fazenda};${r.talhao};${r.entrenos};${r.brocado};${r.brocamento}\n`;
-      totalEntrenos += r.entrenos;
-      totalBrocado += r.brocado;
-    });
-
-    const brocamentoTotal = totalEntrenos > 0 ? ((totalBrocado / totalEntrenos) * 100).toFixed(2).replace('.', ',') : "0,00";
-    csv += `;TOTAL;;${totalEntrenos};${totalBrocado};${brocamentoTotal}\n`;
-
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = "relatorio-brocamento.csv";
-    link.click();
-  }
-
-  /**
-   * Gera PDF do relatório Perda usando jsPDF
-   */
-  function gerarRelatorioPerdaPDF() {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({ orientation: 'landscape' });
-    const colunas = ["Data", "Fazenda", "Frente Serviço", "Turno", "Talhão", "Cana Inteira", "Tolete", "Toco", "Ponta", "Estilhaço", "Pedaço", "Total"];
-
-    const filtroFazenda = document.getElementById('fazendaFiltroPerda').value;
-    const filtroTalhao = document.getElementById('talhaoFiltroPerda').value.toLowerCase();
-    const filtroTurno = document.getElementById('turnoFiltroPerda').value;
-    const filtroFrente = document.getElementById('frenteFiltroPerda').value.toLowerCase();
-    const inicio = document.getElementById('inicioPerda').value;
-    const fim = document.getElementById('fimPerda').value;
-
-    const dadosFiltrados = perdas.filter(r => {
-      const dataValida = (!inicio || r.data >= inicio) && (!fim || r.data <= fim);
-      const fazendaValida = !filtroFazenda || r.codigo === filtroFazenda;
-      const talhaoValido = !filtroTalhao || r.talhao.toLowerCase().includes(filtroTalhao);
-      const turnoValido = !filtroTurno || r.turno === filtroTurno;
-      const frenteValida = !filtroFrente || r.frenteServico.toLowerCase().includes(filtroFrente);
-      return dataValida && fazendaValida && talhaoValido && turnoValido && frenteValida;
-    });
-
-    const linhas = dadosFiltrados.map(r => [
-      r.data,
-      r.fazenda || 'N/D',
-      r.frenteServico,
-      r.turno,
-      r.talhao,
-      r.canaInteira,
-      r.tolete,
-      r.toco,
-      r.ponta,
-      r.estilhaco,
-      r.pedaço,
-      r.total.toFixed(2).replace('.', ',')
-    ]);
-
-    const colunasPerda = ['canaInteira','tolete','toco','ponta','estilhaco','pedaço'];
-    let somaColunas = { canaInteira:0, tolete:0, toco:0, ponta:0, estilhaco:0, pedaço:0 };
-    let somaTotal = 0;
-    let qtdRegistros = dadosFiltrados.length || 1;
-
-    dadosFiltrados.forEach(r => {
-      colunasPerda.forEach(c => {
-        somaColunas[c] += r[c] || 0;
+      registros.push({
+        codigo: document.getElementById('codigo').value.trim(),
+        fazenda: fazendas[document.getElementById('codigo').value.trim()],
+        data: document.getElementById('data').value,
+        talhao: document.getElementById('talhao').value.trim(),
+        entrenos,
+        brocado,
+        brocamento: porcentagem.toFixed(2).replace('.', ',')
       });
-      somaTotal += r.total || 0;
-    });
 
-    const mediaTotal = colunasPerda.map(c => (somaColunas[c]/qtdRegistros).toFixed(2).replace('.', ','));
-    const mediaTotalColuna = (somaTotal / qtdRegistros).toFixed(2).replace('.', ',');
-
-    linhas.push([
-      "",
-      "MÉDIA",
-      "",
-      "",
-      "",
-      mediaTotal[0],
-      mediaTotal[1],
-      mediaTotal[2],
-      mediaTotal[3],
-      mediaTotal[4],
-      mediaTotal[5],
-      mediaTotalColuna
-    ]);
-
-    doc.text("Relatório de Perda de Cana", 14, 16);
-    doc.autoTable({
-      startY: 20,
-      head: [colunas],
-      body: linhas,
-      styles: { fontSize: 9, overflow: 'linebreak' },
-      footStyles: { fontStyle: 'bold' },
-      margin: { left: 10, right: 10 },
-    });
-
-    doc.save("relatorio-perda.pdf");
-  }
-
-  /**
-   * Exporta CSV do relatório Perda
-   */
-  function exportarPerdaExcel() {
-    const filtroFazenda = document.getElementById('fazendaFiltroPerda').value;
-    const filtroTalhao = document.getElementById('talhaoFiltroPerda').value.toLowerCase();
-    const filtroTurno = document.getElementById('turnoFiltroPerda').value;
-    const filtroFrente = document.getElementById('frenteFiltroPerda').value.toLowerCase();
-    const inicio = document.getElementById('inicioPerda').value;
-    const fim = document.getElementById('fimPerda').value;
-
-    const dadosFiltrados = perdas.filter(r => {
-      const dataValida = (!inicio || r.data >= inicio) && (!fim || r.data <= fim);
-      const fazendaValida = !filtroFazenda || r.codigo === filtroFazenda;
-      const talhaoValido = !filtroTalhao || r.talhao.toLowerCase().includes(filtroTalhao);
-      const turnoValido = !filtroTurno || r.turno === filtroTurno;
-      const frenteValida = !filtroFrente || r.frenteServico.toLowerCase().includes(filtroFrente);
-      return dataValida && fazendaValida && talhaoValido && turnoValido && frenteValida;
-    });
-
-    let csv = "Data;Fazenda;Frente Serviço;Turno;Talhão;Cana Inteira;Tolete;Toco;Ponta;Estilhaço;Pedaço;Total\n";
-
-    const colunasPerda = ['canaInteira','tolete','toco','ponta','estilhaco','pedaço'];
-    let somaColunas = { canaInteira:0, tolete:0, toco:0, ponta:0, estilhaco:0, pedaço:0 };
-    let somaTotal = 0;
-    let qtdRegistros = dadosFiltrados.length || 1;
-
-    dadosFiltrados.forEach(r => {
-      csv += `${r.data};${r.fazenda || 'N/D'};${r.frenteServico};${r.turno};${r.talhao};${r.canaInteira};${r.tolete};${r.toco};${r.ponta};${r.estilhaco};${r.pedaço};${r.total.toFixed(2).replace('.', ',')}\n`;
-
-      colunasPerda.forEach(c => {
-        somaColunas[c] += r[c] || 0;
-      });
-      somaTotal += r.total || 0;
-    });
-
-    const mediaTotal = colunasPerda.map(c => (somaColunas[c]/qtdRegistros).toFixed(2).replace('.', ','));
-    const mediaTotalColuna = (somaTotal / qtdRegistros).toFixed(2).replace('.', ',');
-
-    csv += `;MÉDIA;;;;;${mediaTotal[0]};${mediaTotal[1]};${mediaTotal[2]};${mediaTotal[3]};${mediaTotal[4]};${mediaTotal[5]};${mediaTotalColuna}\n`;
-
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = "relatorio-perda.csv";
-    link.click();
-  }
-
-  /**
-   * Excluir registro com confirmação, sem innerHTML (DOM seguro)
-   */
-  function excluirRegistro(tipo, index) {
-    if (!confirm("Tem certeza que deseja excluir este registro?")) return;
-
-    if (tipo === 'brocamento') {
-      registros.splice(index, 1);
       localStorage.setItem('registros', JSON.stringify(registros));
-    } else if (tipo === 'perda') {
-      perdas.splice(index, 1);
+      showAlert('Inspeção salva com sucesso!', 'success');
+
+      // Limpa formulário
+      document.getElementById('codigo').value = '';
+      document.getElementById('fazendaNome').textContent = '';
+      document.getElementById('data').value = '';
+      document.getElementById('talhao').value = '';
+      document.getElementById('entrenos').value = '';
+      document.getElementById('brocado').value = '';
+      document.getElementById('resultado').textContent = '';
+
+      // Mantém foco no primeiro campo
+      document.getElementById('codigo').focus();
+
+      renderGraficoBrocamento();
+    });
+
+    // Salvar perda de cana
+    document.getElementById('btnSalvarPerda').addEventListener('click', () => {
+      const dataPerda = document.getElementById('dataPerda').value;
+      const codigoPerda = document.getElementById('codigoPerda').value.trim();
+      const frenteServico = document.getElementById('frenteServico').value.trim();
+      const talhaoPerda = document.getElementById('talhaoPerda').value.trim();
+      const turno = document.getElementById('turno').value;
+
+      if (!dataPerda || !codigoPerda || !frenteServico || !talhaoPerda) {
+        showAlert('Preencha todos os campos antes de salvar.', 'error');
+        return;
+      }
+
+      const canaInteira = parseFloat(document.getElementById('canaInteira').value) || 0;
+      const tolete = parseFloat(document.getElementById('tolete').value) || 0;
+      const toco = parseFloat(document.getElementById('toco').value) || 0;
+      const ponta = parseFloat(document.getElementById('ponta').value) || 0;
+      const estilhaco = parseFloat(document.getElementById('estilhaco').value) || 0;
+      const pedaco = parseFloat(document.getElementById('pedaco').value) || 0;
+
+      const total = canaInteira + tolete + toco + ponta + estilhaco + pedaco;
+      const media = total / 6;
+
+      perdas.push({
+        data: dataPerda,
+        codigo: codigoPerda,
+        fazenda: fazendas[codigoPerda],
+        frenteServico,
+        turno,
+        talhao: talhaoPerda,
+        canaInteira,
+        tolete,
+        toco,
+        ponta,
+        estilhaco,
+        pedaço: pedaco,
+        total,
+        media: media.toFixed(2).replace('.', ',')
+      });
+
       localStorage.setItem('perdas', JSON.stringify(perdas));
-    }
-    showAlert('Registro excluído com sucesso!', 'success');
-    renderExclusao();
-    renderGraficoBrocamento();
-    renderGraficoPerda();
-  }
+      showAlert('Perda de Cana salva com sucesso!', 'success');
 
-  /**
-   * Renderiza lista para exclusão usando DOM puro
-   */
-  function renderExclusao() {
-    const listaExclusao = document.getElementById("listaExclusao");
-    listaExclusao.innerHTML = '';
+      // Limpa formulário
+      document.getElementById('dataPerda').value = '';
+      document.getElementById('codigoPerda').value = '';
+      document.getElementById('fazendaNomePerda').textContent = '';
+      document.getElementById('frenteServico').value = '';
+      document.getElementById('turno').value = 'A';
+      document.getElementById('talhaoPerda').value = '';
+      document.getElementById('canaInteira').value = '0';
+      document.getElementById('tolete').value = '0';
+      document.getElementById('toco').value = '0';
+      document.getElementById('ponta').value = '0';
+      document.getElementById('estilhaco').value = '0';
+      document.getElementById('pedaco').value = '0';
+      document.getElementById('resultadoPerda').textContent = '';
 
-    // Brocamento
-    const titleBroc = document.createElement('h3');
-    titleBroc.textContent = "Registros de Brocamento";
-    listaExclusao.appendChild(titleBroc);
+      document.getElementById('dataPerda').focus();
 
-    if (registros.length === 0) {
-      const p = document.createElement('p');
-      p.textContent = "Nenhum registro de brocamento.";
-      listaExclusao.appendChild(p);
-    } else {
-      registros.forEach((r, i) => {
-        const p = document.createElement('p');
-        p.textContent = `Data: ${r.data} | Fazenda: ${r.fazenda} | Talhão: ${r.talhao}`;
+      renderGraficoPerda();
+    });
 
-        const btnExcluir = document.createElement('button');
-        btnExcluir.className = 'btn-excluir';
-        btnExcluir.type = 'button';
-        btnExcluir.textContent = 'Excluir';
-        btnExcluir.addEventListener('click', () => excluirRegistro('brocamento', i));
+    /**
+     * Gera PDF do relatório Brocamento usando jsPDF
+     */
+    function gerarRelatorioBrocamentoPDF() {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ orientation: 'landscape' });
+      const colunas = ["Data", "Fazenda", "Talhão", "Entrenós", "Brocado", "Brocamento (%)"];
 
-        p.appendChild(btnExcluir);
-        listaExclusao.appendChild(p);
+      const filtroFazenda = document.getElementById('fazendaFiltroBrocamento').value;
+      const inicio = document.getElementById('inicioBrocamento').value;
+      const fim = document.getElementById('fimBrocamento').value;
+
+      const dadosFiltrados = registros.filter(r => {
+        const dataValida = (!inicio || r.data >= inicio) && (!fim || r.data <= fim);
+        const fazendaValida = !filtroFazenda || r.codigo === filtroFazenda;
+        return dataValida && fazendaValida;
       });
-    }
 
-    // Perda
-    const titlePerda = document.createElement('h3');
-    titlePerda.textContent = "Registros de Perda de Cana";
-    listaExclusao.appendChild(titlePerda);
+      let totalEntrenos = 0;
+      let totalBrocado = 0;
 
-    if (perdas.length === 0) {
-      const p = document.createElement('p');
-      p.textContent = "Nenhum registro de perda de cana.";
-      listaExclusao.appendChild(p);
-    } else {
-      perdas.forEach((r, i) => {
-        const p = document.createElement('p');
-        p.textContent = `Data: ${r.data} | Fazenda: ${r.fazenda || 'N/D'} | Frente de Serviço: ${r.frenteServico} | Talhão: ${r.talhao}`;
-
-        const btnExcluir = document.createElement('button');
-        btnExcluir.className = 'btn-excluir';
-        btnExcluir.type = 'button';
-        btnExcluir.textContent = 'Excluir';
-        btnExcluir.addEventListener('click', () => excluirRegistro('perda', i));
-
-        p.appendChild(btnExcluir);
-        listaExclusao.appendChild(p);
+      const linhas = dadosFiltrados.map(r => {
+        totalEntrenos += r.entrenos;
+        totalBrocado += r.brocado;
+        return [r.data, r.fazenda, r.talhao, r.entrenos, r.brocado, r.brocamento];
       });
+
+      const brocamentoTotal = totalEntrenos > 0 ? ((totalBrocado / totalEntrenos) * 100).toFixed(2).replace('.', ',') : "0,00";
+      linhas.push(["", "TOTAL", "", totalEntrenos, totalBrocado, brocamentoTotal]);
+
+      doc.text("Relatório de Inspeção de Cana (Brocamento)", 14, 16);
+      doc.autoTable({
+        startY: 20,
+        head: [colunas],
+        body: linhas,
+        styles: { fontSize: 10, overflow: 'linebreak' },
+        footStyles: { fontStyle: 'bold' },
+        margin: { left: 10, right: 10 },
+      });
+
+      doc.save("relatorio-brocamento.pdf");
     }
-  }
 
-  /**
-   * Renderiza gráfico de brocamento com Chart.js
-   */
-  function renderGraficoBrocamento() {
-    const ctx = document.getElementById('graficoBrocamento').getContext('2d');
-    const labels = registros.map(r => r.data);
-    const data = registros.map(r => parseFloat(r.brocamento.replace(',', '.')));
+    /**
+     * Exporta CSV do relatório Brocamento
+     */
+    function exportarBrocamentoExcel() {
+      const filtroFazenda = document.getElementById('fazendaFiltroBrocamento').value;
+      const inicio = document.getElementById('inicioBrocamento').value;
+      const fim = document.getElementById('fimBrocamento').value;
 
-    if(window.chartBrocamento) window.chartBrocamento.destroy();
+      const dadosFiltrados = registros.filter(r => {
+        const dataValida = (!inicio || r.data >= inicio) && (!fim || r.data <= fim);
+        const fazendaValida = !filtroFazenda || r.codigo === filtroFazenda;
+        return dataValida && fazendaValida;
+      });
 
-    window.chartBrocamento = new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels,
-        datasets: [{
-          label: 'Rendimento do Dia (%)',
-          data,
-          fill: false,
-          borderColor: 'rgba(64,145,108,0.9)',
-          backgroundColor: 'rgba(64,145,108,0.6)',
-          tension: 0.3,
-          pointRadius: 5,
-          pointHoverRadius: 7,
-          borderWidth: 3
-        }]
-      },
-      options: {
-        responsive: true,
-        plugins: {
-          legend: { display: true, position: 'top' },
-          tooltip: { mode: 'nearest', intersect: false },
-          datalabels: {
-            display: true,
-            align: 'top',
-            color: '#000',
-            font: { weight: 'bold', size: 12 },
-            formatter: function(value) {
-              return value.toFixed(2).replace('.', ',') + '%';
-            }
-          }
+      let totalEntrenos = 0;
+      let totalBrocado = 0;
+
+      let csv = "Data;Fazenda;Talhão;Entrenós;Brocado;Brocamento (%)\n";
+      dadosFiltrados.forEach(r => {
+        csv += `${r.data};${r.fazenda};${r.talhao};${r.entrenos};${r.brocado};${r.brocamento}\n`;
+        totalEntrenos += r.entrenos;
+        totalBrocado += r.brocado;
+      });
+
+      const brocamentoTotal = totalEntrenos > 0 ? ((totalBrocado / totalEntrenos) * 100).toFixed(2).replace('.', ',') : "0,00";
+      csv += `;TOTAL;;${totalEntrenos};${totalBrocado};${brocamentoTotal}\n`;
+
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "relatorio-brocamento.csv";
+      link.click();
+    }
+
+    /**
+     * Gera PDF do relatório Perda usando jsPDF
+     */
+    function gerarRelatorioPerdaPDF() {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ orientation: 'landscape' });
+      const colunas = ["Data", "Fazenda", "Frente Serviço", "Turno", "Talhão", "Cana Inteira", "Tolete", "Toco", "Ponta", "Estilhaço", "Pedaço", "Total"];
+
+      const filtroFazenda = document.getElementById('fazendaFiltroPerda').value;
+      const filtroTalhao = document.getElementById('talhaoFiltroPerda').value.toLowerCase();
+      const filtroTurno = document.getElementById('turnoFiltroPerda').value;
+      const filtroFrente = document.getElementById('frenteFiltroPerda').value.toLowerCase();
+      const inicio = document.getElementById('inicioPerda').value;
+      const fim = document.getElementById('fimPerda').value;
+
+      const dadosFiltrados = perdas.filter(r => {
+        const dataValida = (!inicio || r.data >= inicio) && (!fim || r.data <= fim);
+        const fazendaValida = !filtroFazenda || r.codigo === filtroFazenda;
+        const talhaoValido = !filtroTalhao || r.talhao.toLowerCase().includes(filtroTalhao);
+        const turnoValido = !filtroTurno || r.turno === filtroTurno;
+        const frenteValida = !filtroFrente || r.frenteServico.toLowerCase().includes(filtroFrente);
+        return dataValida && fazendaValida && talhaoValido && turnoValido && frenteValida;
+      });
+
+      const linhas = dadosFiltrados.map(r => [
+        r.data,
+        r.fazenda || 'N/D',
+        r.frenteServico,
+        r.turno,
+        r.talhao,
+        r.canaInteira,
+        r.tolete,
+        r.toco,
+        r.ponta,
+        r.estilhaco,
+        r.pedaço,
+        r.total.toFixed(2).replace('.', ',')
+      ]);
+
+      const colunasPerda = ['canaInteira','tolete','toco','ponta','estilhaco','pedaço'];
+      let somaColunas = { canaInteira:0, tolete:0, toco:0, ponta:0, estilhaco:0, pedaço:0 };
+      let somaTotal = 0;
+      let qtdRegistros = dadosFiltrados.length || 1;
+
+      dadosFiltrados.forEach(r => {
+        colunasPerda.forEach(c => {
+          somaColunas[c] += r[c] || 0;
+        });
+        somaTotal += r.total || 0;
+      });
+
+      const mediaTotal = colunasPerda.map(c => (somaColunas[c]/qtdRegistros).toFixed(2).replace('.', ','));
+      const mediaTotalColuna = (somaTotal / qtdRegistros).toFixed(2).replace('.', ',');
+
+      linhas.push([
+        "",
+        "MÉDIA",
+        "",
+        "",
+        "",
+        mediaTotal[0],
+        mediaTotal[1],
+        mediaTotal[2],
+        mediaTotal[3],
+        mediaTotal[4],
+        mediaTotal[5],
+        mediaTotalColuna
+      ]);
+
+      doc.text("Relatório de Perda de Cana", 14, 16);
+      doc.autoTable({
+        startY: 20,
+        head: [colunas],
+        body: linhas,
+        styles: { fontSize: 9, overflow: 'linebreak' },
+        footStyles: { fontStyle: 'bold' },
+        margin: { left: 10, right: 10 },
+      });
+
+      doc.save("relatorio-perda.pdf");
+    }
+
+    /**
+     * Exporta CSV do relatório Perda
+     */
+    function exportarPerdaExcel() {
+      const filtroFazenda = document.getElementById('fazendaFiltroPerda').value;
+      const filtroTalhao = document.getElementById('talhaoFiltroPerda').value.toLowerCase();
+      const filtroTurno = document.getElementById('turnoFiltroPerda').value;
+      const filtroFrente = document.getElementById('frenteFiltroPerda').value.toLowerCase();
+      const inicio = document.getElementById('inicioPerda').value;
+      const fim = document.getElementById('fimPerda').value;
+
+      const dadosFiltrados = perdas.filter(r => {
+        const dataValida = (!inicio || r.data >= inicio) && (!fim || r.data <= fim);
+        const fazendaValida = !filtroFazenda || r.codigo === filtroFazenda;
+        const talhaoValido = !filtroTalhao || r.talhao.toLowerCase().includes(filtroTalhao);
+        const turnoValido = !filtroTurno || r.turno === filtroTurno;
+        const frenteValida = !filtroFrente || r.frenteServico.toLowerCase().includes(filtroFrente);
+        return dataValida && fazendaValida && talhaoValido && turnoValido && frenteValida;
+      });
+
+      let csv = "Data;Fazenda;Frente Serviço;Turno;Talhão;Cana Inteira;Tolete;Toco;Ponta;Estilhaço;Pedaço;Total\n";
+
+      const colunasPerda = ['canaInteira','tolete','toco','ponta','estilhaco','pedaço'];
+      let somaColunas = { canaInteira:0, tolete:0, toco:0, ponta:0, estilhaco:0, pedaço:0 };
+      let somaTotal = 0;
+      let qtdRegistros = dadosFiltrados.length || 1;
+
+      dadosFiltrados.forEach(r => {
+        csv += `${r.data};${r.fazenda || 'N/D'};${r.frenteServico};${r.turno};${r.talhao};${r.canaInteira};${r.tolete};${r.toco};${r.ponta};${r.estilhaco};${r.pedaço};${r.total.toFixed(2).replace('.', ',')}\n`;
+
+        colunasPerda.forEach(c => {
+          somaColunas[c] += r[c] || 0;
+        });
+        somaTotal += r.total || 0;
+      });
+
+      const mediaTotal = colunasPerda.map(c => (somaColunas[c]/qtdRegistros).toFixed(2).replace('.', ','));
+      const mediaTotalColuna = (somaTotal / qtdRegistros).toFixed(2).replace('.', ',');
+
+      csv += `;MÉDIA;;;;;${mediaTotal[0]};${mediaTotal[1]};${mediaTotal[2]};${mediaTotal[3]};${mediaTotal[4]};${mediaTotal[5]};${mediaTotalColuna}\n`;
+
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "relatorio-perda.csv";
+      link.click();
+    }
+
+    /**
+     * Excluir registro com confirmação, sem innerHTML (DOM seguro)
+     */
+    function excluirRegistro(tipo, index) {
+      if (!confirm("Tem certeza que deseja excluir este registro?")) return;
+
+      if (tipo === 'brocamento') {
+        registros.splice(index, 1);
+        localStorage.setItem('registros', JSON.stringify(registros));
+      } else if (tipo === 'perda') {
+        perdas.splice(index, 1);
+        localStorage.setItem('perdas', JSON.stringify(perdas));
+      }
+      showAlert('Registro excluído com sucesso!', 'success');
+      renderExclusao();
+      renderGraficoBrocamento();
+      renderGraficoPerda();
+    }
+
+    /**
+     * Renderiza lista para exclusão usando DOM puro
+     */
+    function renderExclusao() {
+      const listaExclusao = document.getElementById("listaExclusao");
+      listaExclusao.innerHTML = '';
+
+      // Brocamento
+      const titleBroc = document.createElement('h3');
+      titleBroc.textContent = "Registros de Brocamento";
+      listaExclusao.appendChild(titleBroc);
+
+      if (registros.length === 0) {
+        const p = document.createElement('p');
+        p.textContent = "Nenhum registro de brocamento.";
+        listaExclusao.appendChild(p);
+      } else {
+        registros.forEach((r, i) => {
+          const p = document.createElement('p');
+          p.textContent = `Data: ${r.data} | Fazenda: ${r.fazenda} | Talhão: ${r.talhao}`;
+
+          const btnExcluir = document.createElement('button');
+          btnExcluir.className = 'btn-excluir';
+          btnExcluir.type = 'button';
+          btnExcluir.textContent = 'Excluir';
+          btnExcluir.addEventListener('click', () => excluirRegistro('brocamento', i));
+
+          p.appendChild(btnExcluir);
+          listaExclusao.appendChild(p);
+        });
+      }
+
+      // Perda
+      const titlePerda = document.createElement('h3');
+      titlePerda.textContent = "Registros de Perda de Cana";
+      listaExclusao.appendChild(titlePerda);
+
+      if (perdas.length === 0) {
+        const p = document.createElement('p');
+        p.textContent = "Nenhum registro de perda de cana.";
+        listaExclusao.appendChild(p);
+      } else {
+        perdas.forEach((r, i) => {
+          const p = document.createElement('p');
+          p.textContent = `Data: ${r.data} | Fazenda: ${r.fazenda || 'N/D'} | Frente de Serviço: ${r.frenteServico} | Talhão: ${r.talhao}`;
+
+          const btnExcluir = document.createElement('button');
+          btnExcluir.className = 'btn-excluir';
+          btnExcluir.type = 'button';
+          btnExcluir.textContent = 'Excluir';
+          btnExcluir.addEventListener('click', () => excluirRegistro('perda', i));
+
+          p.appendChild(btnExcluir);
+          listaExclusao.appendChild(p);
+        });
+      }
+    }
+
+    /**
+     * Renderiza gráfico de brocamento com Chart.js
+     */
+    function renderGraficoBrocamento() {
+      const ctx = document.getElementById('graficoBrocamento').getContext('2d');
+      const labels = registros.map(r => r.data);
+      const data = registros.map(r => parseFloat(r.brocamento.replace(',', '.')));
+
+      if(window.chartBrocamento) window.chartBrocamento.destroy();
+
+      window.chartBrocamento = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Rendimento do Dia (%)',
+            data,
+            fill: false,
+            borderColor: 'rgba(64,145,108,0.9)',
+            backgroundColor: 'rgba(64,145,108,0.6)',
+            tension: 0.3,
+            pointRadius: 5,
+            pointHoverRadius: 7,
+            borderWidth: 3
+          }]
         },
-        scales: {
-          y: {
-            beginAtZero: true,
-            max: 100,
-            ticks: {
-              stepSize: 10,
-              callback: function(value) {
-                return value + '%';
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { display: true, position: 'top' },
+            tooltip: { mode: 'nearest', intersect: false },
+            datalabels: {
+              display: true,
+              align: 'top',
+              color: '#000',
+              font: { weight: 'bold', size: 12 },
+              formatter: function(value) {
+                return value.toFixed(2).replace('.', ',') + '%';
               }
             }
           },
-          x: {
-            ticks: { maxRotation: 45, minRotation: 45 }
-          }
-        }
-      },
-      plugins: [ChartDataLabels]
-    });
-  }
-
-  /**
-   * Renderiza gráfico de perda com Chart.js
-   */
-  function renderGraficoPerda() {
-    const ctx = document.getElementById('graficoPerda').getContext('2d');
-    const labels = perdas.map(r => r.data);
-    const data = perdas.map(r => parseFloat(r.media.replace(',', '.')));
-
-    if(window.chartPerda) window.chartPerda.destroy();
-
-    window.chartPerda = new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels,
-        datasets: [{
-          label: 'Perda Média (ton/ha)',
-          data,
-          backgroundColor: 'rgba(220,53,69,0.8)',
-          borderColor: 'rgba(180,30,40,0.9)',
-          borderWidth: 1
-        }]
-      },
-      options: {
-        responsive: true,
-        plugins: {
-          legend: { display: true, position: 'top' },
-          tooltip: { mode: 'index', intersect: false },
-          datalabels: {
-            display: true,
-            align: 'top',
-            color: '#000',
-            font: { weight: 'bold', size: 12 },
-            formatter: function(value) {
-              return value.toFixed(2).replace('.', ',');
+          scales: {
+            y: {
+              beginAtZero: true,
+              max: 100,
+              ticks: {
+                stepSize: 10,
+                callback: function(value) {
+                  return value + '%';
+                }
+              }
+            },
+            x: {
+              ticks: { maxRotation: 45, minRotation: 45 }
             }
           }
         },
-        scales: {
-          y: {
-            beginAtZero: true,
-            ticks: { stepSize: 0.5 }
+        plugins: [ChartDataLabels]
+      });
+    }
+
+    /**
+     * Renderiza gráfico de perda com Chart.js
+     */
+    function renderGraficoPerda() {
+      const ctx = document.getElementById('graficoPerda').getContext('2d');
+      const labels = perdas.map(r => r.data);
+      const data = perdas.map(r => parseFloat(r.media.replace(',', '.')));
+
+      if(window.chartPerda) window.chartPerda.destroy();
+
+      window.chartPerda = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Perda Média (ton/ha)',
+            data,
+            backgroundColor: 'rgba(220,53,69,0.8)',
+            borderColor: 'rgba(180,30,40,0.9)',
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { display: true, position: 'top' },
+            tooltip: { mode: 'index', intersect: false },
+            datalabels: {
+              display: true,
+              align: 'top',
+              color: '#000',
+              font: { weight: 'bold', size: 12 },
+              formatter: function(value) {
+                return value.toFixed(2).replace('.', ',');
+              }
+            }
           },
-          x: {
-            ticks: { maxRotation: 45, minRotation: 45 }
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: { stepSize: 0.5 }
+            },
+            x: {
+              ticks: { maxRotation: 45, minRotation: 45 }
+            }
           }
-        }
-      },
-      plugins: [ChartDataLabels]
-    });
-  }
+        },
+        plugins: [ChartDataLabels]
+      });
+    }
 
-  /**
-   * Mostra o dashboard (dashboard + gráficos)
-   */
-  function mostrarDashboard() {
-    hideAllTabs();
-    const dash = document.getElementById('dashboard');
-    dash.classList.add('active');
-    dash.hidden = false;
-    dash.focus();
-    renderGraficoBrocamento();
-    renderGraficoPerda();
-  }
+    /**
+     * Mostra o dashboard (dashboard + gráficos)
+     */
+    function mostrarDashboard() {
+      hideAllTabs();
+      const dash = document.getElementById('dashboard');
+      dash.classList.add('active');
+      dash.hidden = false;
+      dash.focus();
+      renderGraficoBrocamento();
+      renderGraficoPerda();
+    }
 
-  // Inicialização da página
-  mostrarDashboard();
-  renderExclusao();
+    // Inicialização da página
+    mostrarDashboard();
+    renderExclusao();
 
-  // Botões PDF e Excel para relatórios
-  document.getElementById('btnPDFBrocamento').addEventListener('click', gerarRelatorioBrocamentoPDF);
-  document.getElementById('btnExcelBrocamento').addEventListener('click', exportarBrocamentoExcel);
-  document.getElementById('btnPDFPerda').addEventListener('click', gerarRelatorioPerdaPDF);
-  document.getElementById('btnExcelPerda').addEventListener('click', exportarPerdaExcel);
-</script>
-
+    // Botões PDF e Excel para relatórios
+    document.getElementById('btnPDFBrocamento').addEventListener('click', gerarRelatorioBrocamentoPDF);
+    document.getElementById('btnExcelBrocamento').addEventListener('click', exportarBrocamentoExcel);
+    document.getElementById('btnPDFPerda').addEventListener('click', gerarRelatorioPerdaPDF);
+    document.getElementById('btnExcelPerda').addEventListener('click', exportarPerdaExcel);
+  </script>
 </body>
 </html>
