@@ -195,6 +195,31 @@
     #varietyDisplay { font-size: 14px; color: var(--color-primary); font-weight: 500; height: 20px; margin-top: 5px;}
     .upload-area { border: 2px dashed var(--color-border); border-radius: var(--border-radius); padding: 20px; text-align: center; cursor: pointer; transition: var(--transition); }
     .upload-area:hover { border-color: var(--color-primary); background-color: #f8f9fa; }
+    
+    /* CORREÇÃO: Layout dos botões do cabeçalho */
+    .card-header-actions {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 15px;
+        margin-bottom: 20px;
+    }
+
+    .card-header-actions .button-group {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+    }
+
+    .card-header-actions .button-group button {
+        width: auto;
+        max-width: none;
+        flex-shrink: 0;
+    }
+    /* FIM DA CORREÇÃO */
+    
     @media (max-width: 768px) {
         header h1 { font-size: 18px; max-width: calc(100% - 120px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         #logoutInfo { flex-direction: column; align-items: flex-end; gap: 5px; padding: 6px 10px; }
@@ -281,9 +306,13 @@
         </section>
 
         <section id="planejamentoColheita" class="tab-content card" aria-label="Planeamento de Colheita" tabindex="0" hidden>
-            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+            <div class="card-header-actions">
                 <h2 style="color: var(--color-success); margin-bottom: 0;"><i class="fas fa-tractor"></i> Planeamento de Colheita</h2>
-                <button id="btnAddNewHarvestPlan" class="save" style="margin-top:0; max-width: 250px;"><i class="fas fa-plus"></i> Novo Plano de Colheita</button>
+                <div class="button-group">
+                    <button id="btnGeneralHarvestReportPDF" class="btn-secondary" style="margin-top:0; background: var(--color-danger);"><i class="fas fa-file-pdf"></i> Relatório PDF</button>
+                    <button id="btnGeneralHarvestReportExcel" class="btn-secondary" style="margin-top:0; background: var(--color-primary-dark);"><i class="fas fa-file-excel"></i> Relatório Excel</button>
+                    <button id="btnAddNewHarvestPlan" class="save" style="margin-top:0;"><i class="fas fa-plus"></i> Novo Plano</button>
+                </div>
             </div>
 
             <div id="harvest-plans-list-container">
@@ -654,6 +683,8 @@
                 plansList: document.getElementById('harvest-plans-list'),
                 planEditor: document.getElementById('harvest-plan-editor'),
                 btnAddNew: document.getElementById('btnAddNewHarvestPlan'),
+                btnGeneralReportPDF: document.getElementById('btnGeneralHarvestReportPDF'),
+                btnGeneralReportExcel: document.getElementById('btnGeneralHarvestReportExcel'),
                 btnSavePlan: document.getElementById('btnSaveHarvestPlan'),
                 btnCancelPlan: document.getElementById('btnCancelHarvestPlan'),
                 frontName: document.getElementById('harvestFrontName'),
@@ -1075,9 +1106,10 @@
                             <div><i class="fas fa-weight-hanging"></i> Total: ${totalProducao.toFixed(2)} ton</div>
                         </div>
                         <div class="plano-actions">
-                            <button class="btn-excluir" style="background-color: var(--color-info)" data-action="edit" data-id="${plan.id}"><i class="fas fa-edit"></i> Editar Plano</button>
-                             <button class="btn-excluir" style="background-color: var(--color-success)" data-action="report" data-id="${plan.id}"><i class="fas fa-file-alt"></i> Gerar Relatório da Frente</button>
-                            <button class="btn-excluir" data-action="delete" data-id="${plan.id}"><i class="fas fa-trash"></i> Excluir Plano</button>
+                            <button class="btn-excluir" style="background-color: var(--color-info); margin-left: 0;" data-action="edit" data-id="${plan.id}"><i class="fas fa-edit"></i> Editar</button>
+                            <button class="btn-excluir" style="background-color: var(--color-success);" data-action="report-pdf" data-id="${plan.id}"><i class="fas fa-file-pdf"></i> PDF</button>
+                            <button class="btn-excluir" style="background-color: var(--color-primary-dark);" data-action="report-excel" data-id="${plan.id}"><i class="fas fa-file-excel"></i> Excel</button>
+                            <button class="btn-excluir" data-action="delete" data-id="${plan.id}"><i class="fas fa-trash"></i> Excluir</button>
                         </div>
                     `;
                     plansList.appendChild(card);
@@ -1103,27 +1135,7 @@
                     currentDate.setDate(currentDate.getDate() + diasNecessarios);
                     const dataSaida = new Date(currentDate.getTime());
                     
-                    let totalAgeInDays = 0;
-                    let plotsWithDate = 0;
-                    group.plots.forEach(plot => {
-                        const farm = App.state.fazendas.find(f => f.code === group.fazendaCodigo);
-                        const talhao = farm?.talhoes.find(t => t.id === plot.talhaoId);
-                         if (talhao && talhao.dataUltimaColheita && startDate) {
-                            const dataInicioPlano = new Date(startDate + 'T03:00:00Z');
-                            const dataUltima = new Date(talhao.dataUltimaColheita + 'T03:00:00Z');
-                            if (!isNaN(dataInicioPlano) && !isNaN(dataUltima)) {
-                                totalAgeInDays += Math.abs(dataInicioPlano - dataUltima);
-                                plotsWithDate++;
-                            }
-                        }
-                    });
-
-                    let idadeMediaMeses = 'N/A';
-                    if (plotsWithDate > 0) {
-                        const avgDiffTime = totalAgeInDays / plotsWithDate;
-                        const avgDiffDays = Math.ceil(avgDiffTime / (1000 * 60 * 60 * 24));
-                        idadeMediaMeses = (avgDiffDays / 30).toFixed(1);
-                    }
+                    const idadeMediaMeses = App.actions.calculateAverageAge(group, startDate);
 
                     const row = tableBody.insertRow();
                     row.draggable = true;
@@ -1201,6 +1213,8 @@
                 
                 // --- Harvest Planning Listeners ---
                 App.elements.harvest.btnAddNew.addEventListener('click', () => App.actions.editHarvestPlan());
+                App.elements.harvest.btnGeneralReportPDF.addEventListener('click', () => App.reports.generateHarvestPlanPDF());
+                App.elements.harvest.btnGeneralReportExcel.addEventListener('click', () => App.reports.generateHarvestPlanCSV());
                 App.elements.harvest.btnCancelPlan.addEventListener('click', () => this.showHarvestPlanList());
                 App.elements.harvest.btnSavePlan.addEventListener('click', () => App.actions.saveHarvestPlan());
                 App.elements.harvest.plansList.addEventListener('click', (e) => {
@@ -1209,7 +1223,8 @@
                     const { action, id } = button.dataset;
                     if (action === 'edit') App.actions.editHarvestPlan(id);
                     if (action === 'delete') App.actions.deleteHarvestPlan(id);
-                    if (action === 'report') App.reports.generateHarvestFrontReport(id);
+                    if (action === 'report-pdf') App.reports.generateHarvestPlanPDF(id);
+                    if (action === 'report-excel') App.reports.generateHarvestPlanCSV(id);
                 });
                 App.elements.harvest.fazenda.addEventListener('change', e => this.renderHarvestTalhaoSelection(e.target.value));
                 App.elements.harvest.btnAddOrUpdate.addEventListener('click', () => App.actions.addOrUpdateHarvestSequence());
@@ -1531,6 +1546,29 @@
                 sequence.splice(toIndex, 0, item);
                 App.ui.renderHarvestSequence();
             },
+            calculateAverageAge(group, startDate) {
+                let totalAgeInDays = 0;
+                let plotsWithDate = 0;
+                group.plots.forEach(plot => {
+                    const farm = App.state.fazendas.find(f => f.code === group.fazendaCodigo);
+                    const talhao = farm?.talhoes.find(t => t.id === plot.talhaoId);
+                        if (talhao && talhao.dataUltimaColheita && startDate) {
+                        const dataInicioPlano = new Date(startDate + 'T03:00:00Z');
+                        const dataUltima = new Date(talhao.dataUltimaColheita + 'T03:00:00Z');
+                        if (!isNaN(dataInicioPlano) && !isNaN(dataUltima)) {
+                            totalAgeInDays += Math.abs(dataInicioPlano - dataUltima);
+                            plotsWithDate++;
+                        }
+                    }
+                });
+
+                if (plotsWithDate > 0) {
+                    const avgDiffTime = totalAgeInDays / plotsWithDate;
+                    const avgDiffDays = Math.ceil(avgDiffTime / (1000 * 60 * 60 * 24));
+                    return (avgDiffDays / 30).toFixed(1);
+                }
+                return 'N/A';
+            },
             saveBrocamento() {
                 const { broca } = App.elements;
                 if (!App.ui.validateFields(['codigo', 'data', 'talhao', 'entrenos', 'brocado'])) { App.ui.showAlert("Preencha todos os campos obrigatórios!", "error"); return; }
@@ -1755,37 +1793,135 @@
                 const body = data.map(p => [p.fazenda, p.talhao, p.data, p.frenteServico, p.turno, p.canaInteira, p.tolete, p.toco, p.ponta, p.estilhaco, p.pedaco, p.total, p.media]);
                 this._generateCSV(title, headers, body);
             },
-            generateHarvestFrontReport(planId) {
-                const plan = App.state.harvestPlans.find(p => p.id == planId);
-                if (!plan) {
-                    App.ui.showAlert('Plano de colheita não encontrado.', 'error');
+            generateHarvestPlanPDF(planId = null) {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF({ orientation: 'landscape' });
+                let finalY = 15;
+
+                const plansToReport = planId 
+                    ? App.state.harvestPlans.filter(p => p.id == planId)
+                    : App.state.harvestPlans;
+
+                if (plansToReport.length === 0) {
+                    App.ui.showAlert("Nenhum plano de colheita para gerar relatório.", "warning");
                     return;
                 }
 
-                const talhaoNamesInPlan = plan.sequence.flatMap(group => group.plots.map(p => p.talhaoName.toUpperCase()));
-                const farmCodesInPlan = [...new Set(plan.sequence.map(group => group.fazendaCodigo))];
+                const reportTitle = planId ? `Relatório do Plano: ${plansToReport[0].frontName}` : "Relatório Geral de Planeamento de Colheita";
+                doc.setFontSize(18);
+                doc.text(reportTitle, doc.internal.pageSize.getWidth() / 2, finalY, { align: 'center' });
+                finalY += 15;
 
-                const brocaData = App.state.registros.filter(reg => 
-                    farmCodesInPlan.includes(reg.codigo) && talhaoNamesInPlan.includes(reg.talhao.toUpperCase())
-                );
+                plansToReport.forEach((plan, planIndex) => {
+                    if (planIndex > 0) {
+                        doc.addPage();
+                        finalY = 15;
+                    }
 
-                const perdaData = App.state.perdas.filter(p =>
-                    farmCodesInPlan.includes(p.codigo) && talhaoNamesInPlan.includes(p.talhao.toUpperCase())
-                );
-                
-                let reportGenerated = false;
-                if (brocaData.length > 0) {
-                    this.generateBrocamentoPDF(brocaData, `Relatorio_Broca_${plan.frontName}`);
-                    reportGenerated = true;
-                }
-                if (perdaData.length > 0) {
-                    this.generatePerdaPDF(perdaData, `Relatorio_Perda_${plan.frontName}`);
-                    reportGenerated = true;
+                    if (!planId) {
+                        doc.setFontSize(14);
+                        doc.text(`Frente: ${plan.frontName}`, 14, finalY);
+                        finalY += 10;
+                    }
+
+                    const head = [['Seq.', 'Fazenda', 'Talhões', 'Área', 'Prod.', 'ATR', 'Idade (m)', 'Entrada', 'Saída']];
+                    const body = [];
+                    let currentDate = new Date(plan.startDate + 'T03:00:00Z');
+                    const dailyTon = parseFloat(plan.dailyRate) || 1;
+                    let grandTotalProducao = 0;
+                    let grandTotalArea = 0;
+
+                    plan.sequence.forEach((group, index) => {
+                        const diasNecessarios = dailyTon > 0 ? group.totalProducao / dailyTon : 0;
+                        const dataEntrada = new Date(currentDate.getTime());
+                        currentDate.setDate(currentDate.getDate() + diasNecessarios);
+                        const dataSaida = new Date(currentDate.getTime());
+                        
+                        const idadeMediaMeses = App.actions.calculateAverageAge(group, plan.startDate);
+
+                        body.push([
+                            index + 1,
+                            group.fazendaName,
+                            group.plots.map(p => p.talhaoName).join(', '),
+                            group.totalArea.toFixed(2),
+                            group.totalProducao.toFixed(2),
+                            group.atr,
+                            idadeMediaMeses,
+                            dataEntrada.toLocaleDateString('pt-BR'),
+                            dataSaida.toLocaleDateString('pt-BR')
+                        ]);
+                        currentDate.setDate(currentDate.getDate() + 1);
+                        grandTotalProducao += group.totalProducao;
+                        grandTotalArea += group.totalArea;
+                    });
+
+                    doc.autoTable({
+                        head: head,
+                        body: body,
+                        startY: finalY,
+                        headStyles: { fillColor: [46, 125, 50] },
+                        styles: { fontSize: 8 },
+                        columnStyles: { 2: { cellWidth: 50 } }
+                    });
+
+                    finalY = doc.lastAutoTable.finalY + 10;
+
+                    doc.setFontSize(10);
+                    doc.text(`Resumo do Plano:`, 14, finalY);
+                    finalY += 5;
+                    doc.text(`- Produção Total Estimada: ${grandTotalProducao.toFixed(2)} ton`, 14, finalY);
+                    finalY += 5;
+                    doc.text(`- Área Total: ${grandTotalArea.toFixed(2)} ha`, 14, finalY);
+                    finalY += 5;
+                    doc.text(`- Data Final de Saída Prevista: ${new Date(currentDate.getTime() - (24*60*60*1000)).toLocaleDateString('pt-BR')}`, 14, finalY);
+                    finalY += 10;
+                });
+
+                doc.save(`${reportTitle.toLowerCase().replace(/\s/g, '_')}.pdf`);
+                App.ui.showAlert('Relatório PDF gerado com sucesso!');
+            },
+            generateHarvestPlanCSV(planId = null) {
+                const plansToReport = planId
+                    ? App.state.harvestPlans.filter(p => p.id == planId)
+                    : App.state.harvestPlans;
+
+                if (plansToReport.length === 0) {
+                    App.ui.showAlert("Nenhum plano de colheita para gerar relatório.", "warning");
+                    return;
                 }
 
-                if(!reportGenerated) {
-                    App.ui.showAlert(`Nenhum lançamento de inspeção encontrado para os talhões do plano "${plan.frontName}".`, 'warning');
-                }
+                const reportTitle = planId ? `plano_${plansToReport[0].frontName.toLowerCase().replace(/\s/g, '_')}.csv` : "planejamento_geral_colheita.csv";
+                const headers = ['Frente', 'Seq.', 'Fazenda', 'Talhões', 'Área (ha)', 'Produção (ton)', 'ATR', 'Idade (meses)', 'Entrada', 'Saída'];
+                const body = [];
+
+                plansToReport.forEach(plan => {
+                    let currentDate = new Date(plan.startDate + 'T03:00:00Z');
+                    const dailyTon = parseFloat(plan.dailyRate) || 1;
+
+                    plan.sequence.forEach((group, index) => {
+                        const diasNecessarios = dailyTon > 0 ? group.totalProducao / dailyTon : 0;
+                        const dataEntrada = new Date(currentDate.getTime());
+                        currentDate.setDate(currentDate.getDate() + diasNecessarios);
+                        const dataSaida = new Date(currentDate.getTime());
+                        const idadeMediaMeses = App.actions.calculateAverageAge(group, plan.startDate);
+
+                        body.push([
+                            plan.frontName,
+                            index + 1,
+                            group.fazendaName,
+                            group.plots.map(p => p.talhaoName).join('; '),
+                            group.totalArea.toFixed(2),
+                            group.totalProducao.toFixed(2),
+                            group.atr,
+                            idadeMediaMeses,
+                            dataEntrada.toLocaleDateString('pt-BR'),
+                            dataSaida.toLocaleDateString('pt-BR')
+                        ]);
+                        currentDate.setDate(currentDate.getDate() + 1);
+                    });
+                });
+
+                this._generateCSV(reportTitle, headers, body);
             }
         }
     };
@@ -1795,4 +1931,4 @@
     });
     </script>
 </body>
-</ht
+</html>
