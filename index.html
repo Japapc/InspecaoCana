@@ -337,6 +337,10 @@
                         <div class="form-col" style="flex-grow: 2;"><label for="harvestFazenda" class="required">Fazenda:</label><select id="harvestFazenda" required></select></div>
                         <div class="form-col"><label for="harvestAtr" class="required">ATR Previsto:</label><input type="number" id="harvestAtr" placeholder="Ex: 130.5"></div>
                     </div>
+                    <div class="form-row">
+                        <div class="form-col"><label for="harvestMaturador">Maturador Aplicado:</label><input type="text" id="harvestMaturador" placeholder="Nome do produto"></div>
+                        <div class="form-col"><label for="harvestMaturadorDate">Data de Aplicação:</label><input type="date" id="harvestMaturadorDate"></div>
+                    </div>
                     <div id="harvestTalhaoSelectionContainer">
                         <label>Talhões Disponíveis:</label>
                         <div id="harvestTalhaoSelectionList" class="talhao-selection-list"></div>
@@ -359,6 +363,8 @@
                                 <th>Área (ha)</th>
                                 <th>Produção (ton)</th>
                                 <th>ATR</th>
+                                <th>Maturador</th>
+                                <th>Dias Aplic.</th>
                                 <th>Idade (meses)</th>
                                 <th>Entrada</th>
                                 <th>Saída</th>
@@ -692,6 +698,8 @@
                 dailyRate: document.getElementById('harvestDailyRate'),
                 fazenda: document.getElementById('harvestFazenda'),
                 atr: document.getElementById('harvestAtr'),
+                maturador: document.getElementById('harvestMaturador'),
+                maturadorDate: document.getElementById('harvestMaturadorDate'),
                 talhaoSelectionList: document.getElementById('harvestTalhaoSelectionList'),
                 btnAddOrUpdate: document.getElementById('btnAddOrUpdateHarvestSequence'),
                 btnCancelEdit: document.getElementById('btnCancelEditSequence'),
@@ -1126,6 +1134,8 @@
                 let currentDate = startDate ? new Date(startDate + 'T03:00:00Z') : new Date();
                 const dailyTon = parseFloat(dailyRate) || 1;
 
+                const maturedDaysArr = [];
+
                 sequence.forEach((group, index) => {
                     grandTotalProducao += group.totalProducao;
                     grandTotalArea += group.totalArea;
@@ -1134,7 +1144,13 @@
                     const dataEntrada = new Date(currentDate.getTime());
                     currentDate.setDate(currentDate.getDate() + diasNecessarios);
                     const dataSaida = new Date(currentDate.getTime());
-                    
+
+                    let diasDesdeAplic = '';
+                    if (group.maturadorDate) {
+                        diasDesdeAplic = App.actions.calculateDaysSince(group.maturadorDate);
+                        maturedDaysArr.push(diasDesdeAplic);
+                    }
+
                     const idadeMediaMeses = App.actions.calculateAverageAge(group, startDate);
 
                     const row = tableBody.insertRow();
@@ -1147,6 +1163,8 @@
                         <td>${group.totalArea.toFixed(2)}</td>
                         <td>${group.totalProducao.toFixed(2)}</td>
                         <td><span class="editable-atr" data-id="${group.id}">${group.atr || 'N/A'}</span></td>
+                        <td>${group.maturador || '-'}</td>
+                        <td>${diasDesdeAplic !== '' ? diasDesdeAplic : '-'}</td>
                         <td>${idadeMediaMeses}</td>
                         <td>${dataEntrada.toLocaleDateString('pt-BR')}</td>
                         <td>${dataSaida.toLocaleDateString('pt-BR')}</td>
@@ -1159,10 +1177,24 @@
                 });
 
                 if (sequence.length > 0) {
+                    const avgMaturador = maturedDaysArr.length ? Math.round(maturedDaysArr.reduce((a,b) => a + b, 0) / maturedDaysArr.length) : null;
+                    const variedadesSet = new Set();
+                    sequence.forEach(group => {
+                        group.plots.forEach(p => {
+                            const farm = App.state.fazendas.find(f => f.code === group.fazendaCodigo);
+                            const talhao = farm?.talhoes.find(t => t.id === p.talhaoId);
+                            if (talhao && talhao.variedade) variedadesSet.add(talhao.variedade);
+                        });
+                    });
+                    const variedadesList = Array.from(variedadesSet).join(', ');
+
                     summary.innerHTML = `
                         <p>Produção Total Estimada: <span>${grandTotalProducao.toFixed(2)} ton</span></p>
                         <p>Área Total: <span>${grandTotalArea.toFixed(2)} ha</span></p>
                         <p>Data Final de Saída Prevista: <span>${currentDate.toLocaleDateString('pt-BR')}</span></p>
+                        ${avgMaturador !== null ? `<p>Média de Dias desde Aplicação do Maturador: <span>${avgMaturador} dia(s)</span></p>` : ''}
+                        ${variedadesList ? `<p>Variedades Selecionadas: <span>${variedadesList}</span></p>` : ''}
+                        <p>Hoje: <span>${new Date().toLocaleDateString('pt-BR')}</span></p>
                     `;
                 } else {
                     summary.innerHTML = '<p>Adicione fazendas à sequência para ver o resumo da colheita.</p>';
@@ -1440,7 +1472,7 @@
                     App.ui.showAlert("Primeiro crie ou edite um plano.", "warning");
                     return;
                 }
-                const { fazenda: fazendaSelect, atr: atrInput, editingGroupId } = App.elements.harvest;
+                const { fazenda: fazendaSelect, atr: atrInput, maturador: maturadorInput, maturadorDate: maturadorDateInput, editingGroupId } = App.elements.harvest;
                 const farmCode = fazendaSelect.value;
                 const atr = parseFloat(atrInput.value);
                 const isEditing = editingGroupId.value !== '';
@@ -1468,6 +1500,9 @@
                     }
                 });
 
+                const maturador = maturadorInput.value.trim();
+                const maturadorDate = maturadorDateInput.value;
+
                 if (isEditing) {
                     const group = App.state.activeHarvestPlan.sequence.find(g => g.id == editingGroupId.value);
                     if (group) {
@@ -1475,11 +1510,14 @@
                         group.totalArea = totalArea;
                         group.totalProducao = totalProducao;
                         group.atr = atr;
+                        group.maturador = maturador;
+                        group.maturadorDate = maturadorDate;
                     }
                 } else {
                     App.state.activeHarvestPlan.sequence.push({
                         id: Date.now(), fazendaCodigo: farm.code, fazendaName: farm.name,
-                        plots: selectedPlots, totalArea, totalProducao, atr
+                        plots: selectedPlots, totalArea, totalProducao, atr,
+                        maturador, maturadorDate
                     });
                 }
                 
@@ -1488,7 +1526,7 @@
             },
             editHarvestSequenceGroup(groupId) {
                 if (!App.state.activeHarvestPlan) return;
-                const { fazenda, atr, editingGroupId, btnAddOrUpdate, btnCancelEdit, addOrEditTitle } = App.elements.harvest;
+                const { fazenda, atr, maturador, maturadorDate, editingGroupId, btnAddOrUpdate, btnCancelEdit, addOrEditTitle } = App.elements.harvest;
                 const group = App.state.activeHarvestPlan.sequence.find(g => g.id == groupId);
                 if (!group) return;
 
@@ -1496,6 +1534,8 @@
                 fazenda.value = group.fazendaCodigo;
                 fazenda.disabled = true;
                 atr.value = group.atr;
+                maturador.value = group.maturador || '';
+                maturadorDate.value = group.maturadorDate || '';
                 
                 const plotIds = group.plots.map(p => p.talhaoId);
                 App.ui.renderHarvestTalhaoSelection(group.fazendaCodigo, plotIds);
@@ -1507,11 +1547,13 @@
                 fazenda.scrollIntoView({ behavior: 'smooth', block: 'center' });
             },
             cancelEditSequence() {
-                const { fazenda, atr, editingGroupId, btnAddOrUpdate, btnCancelEdit, addOrEditTitle, talhaoSelectionList } = App.elements.harvest;
+                const { fazenda, atr, maturador, maturadorDate, editingGroupId, btnAddOrUpdate, btnCancelEdit, addOrEditTitle, talhaoSelectionList } = App.elements.harvest;
                 editingGroupId.value = '';
                 fazenda.value = '';
                 fazenda.disabled = false;
                 atr.value = '';
+                maturador.value = '';
+                maturadorDate.value = '';
                 talhaoSelectionList.innerHTML = '';
                 addOrEditTitle.innerHTML = `<i class="fas fa-plus-circle"></i> Adicionar Fazenda à Sequência`;
                 btnAddOrUpdate.innerHTML = `<i class="fas fa-plus"></i> Adicionar à Sequência`;
@@ -1568,6 +1610,13 @@
                     return (avgDiffDays / 30).toFixed(1);
                 }
                 return 'N/A';
+            },
+            calculateDaysSince(dateStr) {
+                const date = new Date(dateStr + 'T03:00:00Z');
+                const now = new Date();
+                if (isNaN(date)) return 0;
+                const diff = now - date;
+                return Math.floor(diff / (1000 * 60 * 60 * 24));
             },
             saveBrocamento() {
                 const { broca } = App.elements;
